@@ -312,6 +312,10 @@ export default function Home() {
       >
         {loading ? 'ENVIANDO...' : 'FINALIZAR E ENVIAR CHECKOUT'}
       </button>
+
+      <div className="flex justify-center mt-4">
+        <a href="/admin" className="text-sm text-blue-600 hover:underline">Ver todos os checkouts</a>
+      </div>
     </main>
   )
 }

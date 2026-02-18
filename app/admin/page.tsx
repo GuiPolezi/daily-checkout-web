@@ -5,12 +5,33 @@ import Link from 'next/link'
 
 export default function AdminPage() {
   const [reports, setReports] = useState<any[]>([])
+  const [filteredReports, setFilteredReports] = useState<any[]>([]) // Estado para os dados filtrados
   const [loading, setLoading] = useState(true)
 
-  
+  // Estados dos filtros
+  const [filterEmail, setFilterEmail] = useState('')
+  const [filterDate, setFilterDate] = useState('')
+
   useEffect(() => {
     fetchReports()
   }, [])
+
+  // Toda vez que a lista original ou os filtros mudarem, atualizamos a lista visível
+  useEffect(() => {
+    let result = reports
+
+    if (filterEmail) {
+      result = result.filter(r => 
+        r.user_email?.toLowerCase().includes(filterEmail.toLowerCase())
+      )
+    }
+
+    if (filterDate) {
+      result = result.filter(r => r.summary.date === filterDate)
+    }
+
+    setFilteredReports(result)
+  }, [filterEmail, filterDate, reports])
 
   async function fetchReports() {
     const { data, error } = await supabase
@@ -18,57 +39,109 @@ export default function AdminPage() {
       .select('*')
       .order('created_at', { ascending: false })
 
-    if (error) {
-    console.error("Erro ao buscar:", error.message) // Veja isso no console do F12
+    if (data) {
+      setReports(data)
+      setFilteredReports(data)
     }
-
-    console.log("Dados recebidos:", data) // Veja se o array vem vazio [] ou com dados
-    if (data) setReports(data)
     setLoading(false)
-
   }
 
-  if (loading) return <div className="p-10 text-center">Carregando relatórios...</div>
+  if (loading) return <div className="p-10 text-center font-mono">Carregando base de dados...</div>
 
   return (
-    <main className="max-w-4xl mx-auto p-6 text-black">
-      <header className="flex justify-between items-center mb-10">
-        <h1 className="text-3xl font-bold">Painel de Checkouts</h1>
-        <Link href="/" className="text-blue-600 hover:underline">Voltar ao Início</Link>
+    <main className="p-6 text-black bg-gray-50 min-h-screen">
+      <header className="flex justify-between items-center mb-8">
+        <div>
+          <h1 className="text-3xl font-black text-blue-900">Painel de Controle</h1>
+          <p className="text-gray-500 text-sm">Gerenciamento de produtividade da equipe</p>
+        </div>
+        <Link href="/" className="bg-white border px-4 py-2 rounded-lg shadow-sm text-sm font-bold hover:bg-gray-50 transition">
+          ← Voltar ao App
+        </Link>
       </header>
 
+      {/* --- BARRA DE FILTROS --- */}
+      <section className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+        <div className="flex flex-col gap-2">
+          <label className="text-xs font-bold uppercase text-gray-400">Buscar por Colaborador</label>
+          <input 
+            type="text" 
+            placeholder="Ex: joao@empresa.com"
+            value={filterEmail}
+            onChange={(e) => setFilterEmail(e.target.value)}
+            className="border p-3 rounded-xl outline-none focus:ring-2 ring-blue-500 bg-gray-50"
+          />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <label className="text-xs font-bold uppercase text-gray-400">Filtrar por Data do Checkout</label>
+          <div className="flex gap-2">
+            <input 
+              type="date" 
+              value={filterDate}
+              onChange={(e) => setFilterDate(e.target.value)}
+              className="border p-3 rounded-xl outline-none focus:ring-2 ring-blue-500 bg-gray-50 flex-1"
+            />
+            {filterDate && (
+              <button 
+                onClick={() => setFilterDate('')}
+                className="bg-gray-200 px-4 rounded-xl text-xs font-bold"
+              >
+                Limpar
+              </button>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* --- LISTAGEM --- */}
       <div className="space-y-6">
-        {reports.length === 0 && <p className="text-gray-500 text-center">Nenhum checkout enviado ainda.</p>}
+        <div className="flex justify-between items-center px-2">
+          <p className="text-sm text-gray-500 italic">
+            Mostrando <b>{filteredReports.length}</b> resultados
+          </p>
+        </div>
+
+        {filteredReports.length === 0 && (
+          <div className="bg-white p-10 rounded-2xl border border-dashed border-gray-300 text-center">
+            <p className="text-gray-400">Nenhum registro encontrado para esses filtros.</p>
+          </div>
+        )}
         
-        {reports.map((report) => (
-          <div key={report.id} className="border rounded-xl p-6 bg-white shadow-sm">
-            <div className="flex justify-between items-start border-b pb-3 mb-4">
+        {filteredReports.map((report) => (
+          <div key={report.id} className="border-l-4 border-l-blue-600 rounded-xl p-6 bg-white shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex justify-between items-start mb-4">
               <div>
-                <p className="font-bold text-lg">{report.user_email}</p>
-                <p className="text-sm text-gray-500">
-                  {new Date(report.summary.date + 'T00:00:00').toLocaleDateString('pt-BR')}
-                </p>
-                <p className="text-[10px] text-gray-400">
-                    Enviado em: {new Date(report.created_at).toLocaleString('pt-BR')}
-                </p>
+                <p className="font-black text-lg text-gray-900">{report.user_email}</p>
+                <div className="flex items-center gap-2 mt-1">
+                   <span className="bg-blue-50 text-blue-700 text-[10px] font-black px-2 py-0.5 rounded uppercase">
+                     📅 {new Date(report.summary.date + 'T00:00:00').toLocaleDateString('pt-BR')}
+                   </span>
+                   <span className="text-[10px] text-gray-400 font-medium">
+                     Enviado em: {new Date(report.created_at).toLocaleString('pt-BR')}
+                   </span>
+                </div>
               </div>
+              
               <div className="text-right">
-                <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-bold">
-                  {report.summary.tasks.length} atividades
-                </span>
+                <div className="text-2xl font-black text-blue-600">
+                  {report.summary.tasks.filter((t: any) => t.done).length}
+                  <span className="text-gray-300 text-sm font-normal"> / {report.summary.tasks.length}</span>
+                </div>
+                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">Tarefas Concluídas</p>
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="grid grid-cols-1 gap-2 bg-gray-50 p-4 rounded-xl">
               {report.summary.tasks.map((task: any, index: number) => (
                 <div key={index} className="flex items-center gap-3 text-sm">
-                  <span className={task.done ? "text-green-500" : "text-gray-300"}>
-                    {task.done ? "●" : "○"}
-                  </span>
-                  <span className={task.done ? "text-gray-800" : "text-gray-400 italic"}>
+                  <div className={`w-2 h-2 rounded-full ${task.done ? "bg-green-500" : "bg-red-400"}`} />
+                  <span className={`flex-1 ${task.done ? "text-gray-700" : "text-gray-400 line-through decoration-1"}`}>
                     {task.title}
                   </span>
-                  <span className="text-[9px] font-bold text-gray-400 ml-auto border px-1 rounded uppercase">
+                  <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded border ${
+                    task.prio === 'Urgente' ? 'text-red-500 border-red-200' : 'text-gray-400 border-gray-200'
+                  }`}>
                     {task.prio}
                   </span>
                 </div>

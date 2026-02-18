@@ -1,8 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { supabase } from '@/src/lib/supabaseClient' // O @ aponta para a pasta 'src'
+import { supabase } from '@/src/lib/supabaseClient'
 
-// Definindo o formato da Tarefa para o TypeScript não reclamar
 interface Task {
   id: number;
   title: string;
@@ -12,30 +11,37 @@ interface Task {
 }
 
 export default function Home() {
+  // Estados de Autenticação
   const [session, setSession] = useState<any>(null)
+  const [isRegistering, setIsRegistering] = useState(false)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  
+  // Estados das Tarefas
   const [tasks, setTasks] = useState<Task[]>([])
   const [newTask, setNewTask] = useState('')
   const [priority, setPriority] = useState<Task['priority']>('Normal')
   const [loading, setLoading] = useState(false)
 
+  // Monitoramento da Sessão
   useEffect(() => {
-    // Pega a sessão atual
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       if (session) fetchTasks(session.user.id)
     })
 
-    // Escuta mudanças no login (login/logout)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
       if (session) fetchTasks(session.user.id)
+      else setTasks([]) // Limpa tarefas ao sair
     })
 
     return () => subscription.unsubscribe()
   }, [])
 
+  // Buscar Tarefas
   async function fetchTasks(userId: string) {
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('tasks')
       .select('*')
       .eq('user_id', userId)
@@ -44,14 +50,23 @@ export default function Home() {
     if (data) setTasks(data as Task[])
   }
 
-  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
+  // Lógica de Login / Cadastro (E-mail e Senha)
+  const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault()
-    const formData = new FormData(e.currentTarget)
-    const email = formData.get('email') as string
-    await supabase.auth.signInWithOtp({ email })
-    alert('Verifique seu email para o link de login!')
+    setLoading(true)
+
+    if (isRegistering) {
+      const { error } = await supabase.auth.signUp({ email, password })
+      if (error) alert('Erro no cadastro: ' + error.message)
+      else alert('Conta criada! Agora você pode fazer login.')
+    } else {
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) alert('Erro no login: Verifique suas credenciais.')
+    }
+    setLoading(false)
   }
 
+  // Gerenciamento de Tarefas
   const addTask = async () => {
     if (!newTask || !session) return
     const { data, error } = await supabase
@@ -78,7 +93,7 @@ export default function Home() {
     if (!session) return
     setLoading(true)
     const summary = {
-      date: new Date().toISOString(),
+      date: new Date().toLocaleString('pt-BR'),
       tasks: tasks.map(t => ({ title: t.title, done: t.is_completed, prio: t.priority }))
     }
 
@@ -87,23 +102,62 @@ export default function Home() {
       summary: summary
     }])
 
-    if (!error) alert('Checkout enviado!')
+    if (!error) {
+      alert('Checkout enviado com sucesso!')
+    } else {
+      alert('Erro ao enviar relatório.')
+    }
     setLoading(false)
   }
 
+  // --- UI: LOGIN E CADASTRO ---
   if (!session) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-50 text-black">
-        <form onSubmit={handleLogin} className="flex flex-col gap-4 p-8 border bg-white rounded-xl shadow-sm w-96">
-          <h1 className="text-2xl font-bold text-center">Acesso Equipe</h1>
-          <p className="text-sm text-gray-500 text-center">Digite seu e-mail para receber o link de acesso.</p>
-          <input name="email" type="email" placeholder="seu@email.com" className="border p-3 rounded-lg outline-none focus:ring-2 ring-blue-500" required />
-          <button type="submit" className="bg-blue-600 text-white p-3 rounded-lg font-semibold hover:bg-blue-700 transition">Enviar Link</button>
+      <div className="flex h-screen items-center justify-center bg-gray-50 text-black p-4">
+        <form onSubmit={handleAuth} className="flex flex-col gap-4 p-8 border bg-white rounded-xl shadow-lg w-full max-w-md">
+          <h1 className="text-2xl font-bold text-center">
+            {isRegistering ? 'Criar Conta' : 'Acesso Equipe'}
+          </h1>
+          
+          <input 
+            type="email" 
+            placeholder="seu@email.com" 
+            className="border p-3 rounded-lg outline-none focus:ring-2 ring-blue-500" 
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required 
+          />
+          
+          <input 
+            type="password" 
+            placeholder="Sua senha" 
+            className="border p-3 rounded-lg outline-none focus:ring-2 ring-blue-500" 
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required 
+          />
+
+          <button 
+            type="submit" 
+            disabled={loading}
+            className="bg-blue-600 text-white p-3 rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50"
+          >
+            {loading ? 'Aguarde...' : isRegistering ? 'Cadastrar' : 'Entrar'}
+          </button>
+
+          <button 
+            type="button"
+            onClick={() => setIsRegistering(!isRegistering)}
+            className="text-sm text-blue-600 hover:underline mt-2 text-center"
+          >
+            {isRegistering ? 'Já tem conta? Entre aqui' : 'Não tem conta? Cadastre-se'}
+          </button>
         </form>
       </div>
     )
   }
 
+  // --- UI: DASHBOARD ---
   return (
     <main className="max-w-2xl mx-auto p-6 min-h-screen text-black">
       <header className="flex justify-between items-center mb-10">
@@ -135,18 +189,18 @@ export default function Home() {
 
       <div className="space-y-3 mb-10">
         {tasks.map(task => (
-          <div key={task.id} className="flex items-center gap-4 p-4 bg-white border rounded-xl hover:shadow-md transition group">
+          <div key={task.id} className="flex items-center gap-4 p-4 bg-white border rounded-xl hover:shadow-md transition">
             <input 
               type="checkbox" 
               checked={task.is_completed} 
               onChange={() => toggleTask(task.id, task.is_completed)}
-              className="w-6 h-6 rounded-full border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+              className="w-6 h-6 cursor-pointer"
             />
             <div className="flex-1 flex items-center justify-between">
               <span className={`font-medium ${task.is_completed ? 'line-through text-gray-400' : 'text-gray-800'}`}>
                 {task.title}
               </span>
-              <span className={`text-[10px] uppercase tracking-widest px-2 py-1 rounded-md font-bold text-white
+              <span className={`text-[10px] uppercase px-2 py-1 rounded-md font-bold text-white
                 ${task.priority === 'Urgente' ? 'bg-red-500' : task.priority === 'Moderado' ? 'bg-amber-500' : 'bg-blue-500'}`}>
                 {task.priority}
               </span>
@@ -158,7 +212,7 @@ export default function Home() {
       <button 
         onClick={submitCheckout} 
         disabled={loading}
-        className="w-full bg-blue-600 text-white p-5 rounded-2xl font-black text-xl shadow-lg shadow-blue-200 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
+        className="w-full bg-blue-600 text-white p-5 rounded-2xl font-black text-xl shadow-lg hover:scale-[1.01] active:scale-95 transition-all disabled:opacity-50"
       >
         {loading ? 'ENVIANDO...' : 'FINALIZAR E ENVIAR CHECKOUT'}
       </button>

@@ -150,7 +150,7 @@ export default function Home() {
     }
     setLoading(false)
 
-
+    
   }
 
   // --- UI: LOGIN E CADASTRO ---

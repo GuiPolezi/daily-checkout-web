@@ -10,6 +10,8 @@ export async function POST(req: Request) {
       host: process.env.SMTP_HOST,
       port: Number(process.env.SMTP_PORT),
       secure: true, // true para 465, false para outras portas
+      debug: true,   // <--- ADICIONE ISSO
+      logger: true,  // <--- ADICIONE ISSO
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,

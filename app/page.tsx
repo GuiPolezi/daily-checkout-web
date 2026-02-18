@@ -27,6 +27,36 @@ export default function Home() {
 // --- NOVO: Estado para controlar a data selecionada (Formato YYYY-MM-DD) ---
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
 
+  // Função para alterar avatar usuario
+  const uploadAvatar = async (event: any) => {
+    try {
+      const file = event.target.files[0]
+      const fileExt = file.name.split('.').pop()
+      const filePath = `${session.user.id}-${Math.random()}.${fileExt}`
+
+      // 1. Sobe para o Storage
+      let { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file)
+
+      if (uploadError) throw uploadError
+
+      // 2. Pega a URL pública
+      const { data } = supabase.storage.from('avatars').getPublicUrl(filePath)
+      
+      // 3. Salva a URL na tabela profiles
+      await supabase.from('profiles').upsert({ 
+        id: session.user.id, 
+        email: session.user.email,
+        avatar_url: data.publicUrl 
+      })
+
+      alert('Foto atualizada!')
+      window.location.reload()
+    } catch (error) {
+      alert('Erro no upload')
+    }
+  }
 
   // Monitoramento da Sessão
   useEffect(() => {
@@ -231,6 +261,15 @@ export default function Home() {
             <a href="/suporte" className="text-red-500 hover:underline">📢 ROTINA DA EQUIPE</a>
           </div>
           <p className="text-gray-500 text-sm">{session.user.email}</p>
+          <div className="flex items-center gap-4 mb-4">
+            <label className="cursor-pointer">
+              <div className="w-12 h-12 bg-gray-200 rounded-full overflow-hidden border-2 border-blue-500">
+                <img src="https://ui-avatars.com/api/?name=User" id="avatar-preview" className="w-full h-full object-cover" />
+              </div>
+              <input type="file" className="hidden" onChange={uploadAvatar} accept="image/*" />
+            </label>
+            <p className="text-xs text-blue-600 font-bold">Clique na foto para trocar</p>
+          </div>
         </div>
         <button onClick={() => supabase.auth.signOut()} className="text-sm font-medium text-red-500 hover:underline">Sair</button>
       </header>
@@ -340,6 +379,10 @@ export default function Home() {
       <div className="flex justify-center mt-4">
         <a href="/admin" className="text-sm text-blue-600 hover:underline">Ver todos os checkouts</a>
       </div>
+
+          <a href="/usuarios" className="flex-1 bg-blue-50 text-blue-600 p-3 rounded-xl text-center text-sm font-black border border-blue-100">
+      👥 EQUIPE
+    </a>
     </main>
   )
 }

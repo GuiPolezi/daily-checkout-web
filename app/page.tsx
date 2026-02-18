@@ -22,6 +22,10 @@ export default function Home() {
   const [newTask, setNewTask] = useState('')
   const [priority, setPriority] = useState<Task['priority']>('Normal')
   const [loading, setLoading] = useState(false)
+  const [editingTaskId, setEditingTaskId] = useState<number | null>(null)
+
+
+
 
   // Monitoramento da Sessão
   useEffect(() => {
@@ -64,6 +68,56 @@ export default function Home() {
       if (error) alert('Erro no login: Verifique suas credenciais.')
     }
     setLoading(false)
+  }
+
+
+  // Edição de Tarefas
+// --- NOVA FUNÇÃO: ADICIONAR OU SALVAR EDIÇÃO ---
+  const saveTask = async () => {
+    if (!newTask || !session) return
+
+    if (editingTaskId) {
+      // MODO EDIÇÃO
+      const { error } = await supabase
+        .from('tasks')
+        .update({ title: newTask, priority: priority })
+        .eq('id', editingTaskId)
+
+      if (!error) {
+        setTasks(tasks.map(t => t.id === editingTaskId ? { ...t, title: newTask, priority: priority } : t))
+        setEditingTaskId(null)
+        setNewTask('')
+      }
+    } else {
+      // MODO ADIÇÃO
+      const { data, error } = await supabase
+        .from('tasks')
+        .insert([{ title: newTask, priority: priority, user_id: session.user.id }])
+        .select()
+
+      if (!error && data) {
+        setTasks([data[0] as Task, ...tasks])
+        setNewTask('')
+      }
+    }
+  }
+
+  // --- NOVA FUNÇÃO: REMOVER ---
+  const deleteTask = async (id: number) => {
+    if (!confirm('Deseja excluir esta atividade?')) return
+    
+    const { error } = await supabase.from('tasks').delete().eq('id', id)
+    if (!error) {
+      setTasks(tasks.filter(t => t.id !== id))
+    }
+  }
+
+  // Preparar para editar
+  const startEdit = (task: Task) => {
+    setEditingTaskId(task.id)
+    setNewTask(task.title)
+    setPriority(task.priority)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   // Gerenciamento de Tarefas
@@ -172,28 +226,38 @@ export default function Home() {
         <button onClick={() => supabase.auth.signOut()} className="text-sm font-medium text-red-500 hover:underline">Sair</button>
       </header>
 
-      <section className="flex gap-2 mb-8 bg-white p-2 rounded-xl shadow-sm border">
+      {/* Input de Atividades (Serve para Criar e Editar) */}
+      <section className={`flex gap-2 mb-8 p-2 rounded-xl border transition-colors ${editingTaskId ? 'bg-amber-50 border-amber-300' : 'bg-white shadow-sm'}`}>
         <input 
           value={newTask}
           onChange={(e) => setNewTask(e.target.value)}
-          placeholder="O que precisa ser feito?" 
-          className="flex-1 p-2 outline-none"
+          placeholder={editingTaskId ? "Editando atividade..." : "O que precisa ser feito?"} 
+          className="flex-1 p-2 outline-none bg-transparent"
         />
         <select 
           value={priority} 
           onChange={(e) => setPriority(e.target.value as Task['priority'])}
-          className="bg-gray-50 p-2 rounded-lg text-sm font-medium border-none"
+          className="p-2 rounded-lg text-sm font-medium border-none bg-transparent"
         >
           <option value="Normal">Normal</option>
           <option value="Moderado">Moderado</option>
           <option value="Urgente">Urgente</option>
         </select>
-        <button onClick={addTask} className="bg-black text-white px-6 py-2 rounded-lg font-bold hover:bg-gray-800">+</button>
+        <button 
+          onClick={saveTask} 
+          className={`${editingTaskId ? 'bg-amber-500' : 'bg-black'} text-white px-6 py-2 rounded-lg font-bold`}
+        >
+          {editingTaskId ? 'Salvar' : '+'}
+        </button>
+        {editingTaskId && (
+          <button onClick={() => {setEditingTaskId(null); setNewTask('');}} className="text-xs text-gray-500">Cancelar</button>
+        )}
       </section>
 
+      {/* Lista de Tarefas */}
       <div className="space-y-3 mb-10">
         {tasks.map(task => (
-          <div key={task.id} className="flex items-center gap-4 p-4 bg-white border rounded-xl hover:shadow-md transition">
+          <div key={task.id} className="flex items-center gap-4 p-4 bg-white border rounded-xl group hover:shadow-md transition">
             <input 
               type="checkbox" 
               checked={task.is_completed} 
@@ -204,15 +268,25 @@ export default function Home() {
               <span className={`font-medium ${task.is_completed ? 'line-through text-gray-400' : 'text-gray-800'}`}>
                 {task.title}
               </span>
-              <span className={`text-[10px] uppercase px-2 py-1 rounded-md font-bold text-white
-                ${task.priority === 'Urgente' ? 'bg-red-500' : task.priority === 'Moderado' ? 'bg-amber-500' : 'bg-blue-500'}`}>
-                {task.priority}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className={`text-[9px] uppercase px-2 py-1 rounded-md font-bold text-white
+                  ${task.priority === 'Urgente' ? 'bg-red-500' : task.priority === 'Moderado' ? 'bg-amber-500' : 'bg-blue-500'}`}>
+                  {task.priority}
+                </span>
+                
+                {/* BOTÕES DE EDITAR E EXCLUIR */}
+                <button onClick={() => startEdit(task)} className="opacity-0 group-hover:opacity-100 p-1 text-blue-600 hover:bg-blue-50 rounded transition">
+                  ✏️
+                </button>
+                <button onClick={() => deleteTask(task.id)} className="opacity-0 group-hover:opacity-100 p-1 text-red-600 hover:bg-red-50 rounded transition">
+                  🗑️
+                </button>
+              </div>
             </div>
           </div>
         ))}
       </div>
-
+      
       <button 
         onClick={submitCheckout} 
         disabled={loading}

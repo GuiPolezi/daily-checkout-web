@@ -24,34 +24,37 @@ export default function Home() {
   const [loading, setLoading] = useState(false)
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null)
 
-
+// --- NOVO: Estado para controlar a data selecionada (Formato YYYY-MM-DD) ---
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
 
 
   // Monitoramento da Sessão
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
-      if (session) fetchTasks(session.user.id)
+      if (session) fetchTasks(session.user.id, selectedDate) // Busca tarefas já filtrando pela data selecionada
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
-      if (session) fetchTasks(session.user.id)
+      if (session) fetchTasks(session.user.id, selectedDate) // Refetch com a data selecionada
       else setTasks([]) // Limpa tarefas ao sair
     })
 
     return () => subscription.unsubscribe()
-  }, [])
+  }, [selectedDate]) // Adiciona selectedDate como dependência para refetch quando a data mudar
 
   // Buscar Tarefas
-  async function fetchTasks(userId: string) {
+  // Atualizado para filtrar por data
+  async function fetchTasks(userId: string, date: string) {
     const { data } = await supabase
       .from('tasks')
       .select('*')
       .eq('user_id', userId)
+      .eq('task_date', date) // Filtro crucial
       .order('created_at', { ascending: false })
     
-    if (data) setTasks(data as Task[])
+    setTasks(data ? (data as Task[]) : [])
   }
 
   // Lógica de Login / Cadastro (E-mail e Senha)
@@ -92,7 +95,7 @@ export default function Home() {
       // MODO ADIÇÃO
       const { data, error } = await supabase
         .from('tasks')
-        .insert([{ title: newTask, priority: priority, user_id: session.user.id }])
+        .insert([{ title: newTask, priority: priority, user_id: session.user.id, task_date: selectedDate }])
         .select()
 
       if (!error && data) {
@@ -120,24 +123,6 @@ export default function Home() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  // Gerenciamento de Tarefas
-  const addTask = async () => {
-    if (!newTask || !session) return
-    const { data, error } = await supabase
-      .from('tasks')
-      .insert([{ 
-        title: newTask, 
-        priority: priority, 
-        user_id: session.user.id 
-      }])
-      .select()
-
-    if (!error && data) {
-      setTasks([data[0] as Task, ...tasks])
-      setNewTask('')
-    }
-  }
-
   const toggleTask = async (id: number, currentStatus: boolean) => {
     setTasks(tasks.map(t => t.id === id ? { ...t, is_completed: !currentStatus } : t))
     await supabase.from('tasks').update({ is_completed: !currentStatus }).eq('id', id)
@@ -148,7 +133,7 @@ export default function Home() {
     setLoading(true)
 
     const summary = {
-      date: new Date().toLocaleString('pt-BR'),
+      date: selectedDate, // Relatório vinculado à data do calendário
       tasks: tasks.map(t => ({ title: t.title, done: t.is_completed, prio: t.priority }))
     }
 
@@ -226,6 +211,39 @@ export default function Home() {
         <button onClick={() => supabase.auth.signOut()} className="text-sm font-medium text-red-500 hover:underline">Sair</button>
       </header>
 
+      {/* --- NOVO: SELETOR DE DATA (CALENDÁRIO) --- */}
+      <section className="mb-8 bg-blue-50 p-4 rounded-2xl border border-blue-100 flex items-center justify-between">
+        <button 
+          onClick={() => {
+            const d = new Date(selectedDate); d.setDate(d.getDate() - 1);
+            setSelectedDate(d.toISOString().split('T')[0]);
+          }}
+          className="p-2 hover:bg-blue-100 rounded-full"
+        >
+          ⬅️
+        </button>
+        
+        <div className="text-center">
+          <input 
+            type="date" 
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            className="bg-transparent font-bold text-lg text-blue-800 outline-none cursor-pointer"
+          />
+          <p className="text-[10px] uppercase tracking-widest text-blue-400 font-bold">Navegar por dia</p>
+        </div>
+
+        <button 
+          onClick={() => {
+            const d = new Date(selectedDate); d.setDate(d.getDate() + 1);
+            setSelectedDate(d.toISOString().split('T')[0]);
+          }}
+          className="p-2 hover:bg-blue-100 rounded-full"
+        >
+          ➡️
+        </button>
+      </section>
+
       {/* Input de Atividades (Serve para Criar e Editar) */}
       <section className={`flex gap-2 mb-8 p-2 rounded-xl border transition-colors ${editingTaskId ? 'bg-amber-50 border-amber-300' : 'bg-white shadow-sm'}`}>
         <input 
@@ -286,7 +304,7 @@ export default function Home() {
           </div>
         ))}
       </div>
-      
+
       <button 
         onClick={submitCheckout} 
         disabled={loading}

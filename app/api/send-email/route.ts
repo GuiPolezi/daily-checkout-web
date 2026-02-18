@@ -9,11 +9,15 @@ export async function POST(req: Request) {
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: Number(process.env.SMTP_PORT),
-      secure: true, // true para 465, false para outras portas
+      secure: false, 
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
       },
+      tls: {
+        rejectUnauthorized: false, // Permite conexões com certificados autoassinados
+        minVersion: 'TLSv1.2', // Garante o uso de TLS 1.2 ou superior
+      }
     });
 
     // 2. Formata a lista de tarefas para o HTML

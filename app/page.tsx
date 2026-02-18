@@ -137,6 +137,7 @@ export default function Home() {
       tasks: tasks.map(t => ({ title: t.title, done: t.is_completed, prio: t.priority }))
     }
 
+    // Salvando no Banco de dados
     const { error } = await supabase.from('reports').insert([{
       user_id: session.user.id,
       user_email: session.user.email, // Adicionando o email aqui!
@@ -148,9 +149,29 @@ export default function Home() {
     } else {
       alert('Erro ao enviar relatório.')
     }
-    setLoading(false)
 
-    
+    // Lógica para enviar o e-mail via API Route
+    try {
+      const response = await fetch('./api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: session.user.email,
+          date: selectedDate,
+          tasks: summary.tasks
+        })
+      })
+
+      if (response.ok) {
+        alert('E-mail enviado com sucesso!')
+      } else {
+        alert('Erro ao enviar e-mail.')
+      }
+    } catch (err) {
+      alert('Erro na comunicação com o servidor.')
+    }
+
+    setLoading(false)
   }
 
   // --- UI: LOGIN E CADASTRO ---

@@ -226,7 +226,10 @@ export default function Home() {
     <main className="max-w-2xl mx-auto p-6 min-h-screen text-black">
       <header className="flex justify-between items-center mb-10">
         <div>
-          <h1 className="text-3xl font-extrabold">Meu Dia</h1>
+          <div className="box flex items-center gap-4">
+            <h1 className="text-3xl font-extrabold">Meu Dia</h1>
+            <a href="/suporte" className="text-red-500 hover:underline">📢 ROTINA DA EQUIPE</a>
+          </div>
           <p className="text-gray-500 text-sm">{session.user.email}</p>
         </div>
         <button onClick={() => supabase.auth.signOut()} className="text-sm font-medium text-red-500 hover:underline">Sair</button>

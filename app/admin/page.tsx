@@ -7,6 +7,7 @@ export default function AdminPage() {
   const [reports, setReports] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
+  
   useEffect(() => {
     fetchReports()
   }, [])
@@ -17,8 +18,14 @@ export default function AdminPage() {
       .select('*')
       .order('created_at', { ascending: false })
 
+    if (error) {
+    console.error("Erro ao buscar:", error.message) // Veja isso no console do F12
+    }
+
+    console.log("Dados recebidos:", data) // Veja se o array vem vazio [] ou com dados
     if (data) setReports(data)
     setLoading(false)
+
   }
 
   if (loading) return <div className="p-10 text-center">Carregando relatórios...</div>

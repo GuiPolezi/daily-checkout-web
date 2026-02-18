@@ -27,6 +27,9 @@ export default function Home() {
 // --- NOVO: Estado para controlar a data selecionada (Formato YYYY-MM-DD) ---
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
 
+// Usuario
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+
   // Função para alterar avatar usuario
   const uploadAvatar = async (event: any) => {
     try {
@@ -52,7 +55,7 @@ export default function Home() {
       })
 
       alert('Foto atualizada!')
-      window.location.reload()
+      setAvatarUrl(data.publicUrl) // Isso muda a foto na hora sem recarregar a página!
     } catch (error) {
       alert('Erro no upload')
     }
@@ -62,7 +65,10 @@ export default function Home() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
-      if (session) fetchTasks(session.user.id, selectedDate) // Busca tarefas já filtrando pela data selecionada
+      if (session) {
+        fetchTasks(session.user.id, selectedDate) // Busca tarefas já filtrando pela data selecionada
+        fetchProfile(session.user.id) // <--- Nova função
+      } 
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -73,6 +79,17 @@ export default function Home() {
 
     return () => subscription.unsubscribe()
   }, [selectedDate]) // Adiciona selectedDate como dependência para refetch quando a data mudar
+
+  // Função para buscar o perfil
+  async function fetchProfile(userId: string) {
+    const { data } = await supabase
+      .from('profiles')
+      .select('avatar_url')
+      .eq('id', userId)
+      .single()
+    
+    if (data?.avatar_url) setAvatarUrl(data.avatar_url)
+  }
 
   // Buscar Tarefas
   // Atualizado para filtrar por data
@@ -264,7 +281,10 @@ export default function Home() {
           <div className="flex items-center gap-4 mb-4">
             <label className="cursor-pointer">
               <div className="w-12 h-12 bg-gray-200 rounded-full overflow-hidden border-2 border-blue-500">
-                <img src="https://ui-avatars.com/api/?name=User" id="avatar-preview" className="w-full h-full object-cover" />
+                <img 
+                    src={avatarUrl || `https://ui-avatars.com/api/?name=${session?.user?.email}`} 
+                    className="w-full h-full object-cover" 
+                  />
               </div>
               <input type="file" className="hidden" onChange={uploadAvatar} accept="image/*" />
             </label>

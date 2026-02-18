@@ -46,7 +46,10 @@ export default function AdminPage() {
               <div>
                 <p className="font-bold text-lg">{report.user_email}</p>
                 <p className="text-sm text-gray-500">
-                  {new Date(report.created_at).toLocaleString('pt-BR')}
+                  {new Date(report.summary.date + 'T00:00:00').toLocaleDateString('pt-BR')}
+                </p>
+                <p className="text-[10px] text-gray-400">
+                    Enviado em: {new Date(report.created_at).toLocaleString('pt-BR')}
                 </p>
               </div>
               <div className="text-right">

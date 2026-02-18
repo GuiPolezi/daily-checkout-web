@@ -197,7 +197,7 @@ export default function Home() {
       alert('Erro ao enviar relatório.')
     }
 
-    // Lógica para enviar o e-mail via API Route
+    /* Lógica para enviar o e-mail via API Route
     try {
       const response = await fetch('./api/send-email', {
         method: 'POST',
@@ -217,7 +217,7 @@ export default function Home() {
     } catch (err) {
       alert('Erro na comunicação com o servidor.')
     }
-
+  */
     setLoading(false)
   }
 

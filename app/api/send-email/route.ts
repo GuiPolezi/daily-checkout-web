@@ -1,6 +1,6 @@
+/*
 import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
-
 export async function POST(req: Request) {
   try {
     const { email, date, tasks } = await req.json();
@@ -52,4 +52,4 @@ export async function POST(req: Request) {
     console.error('Erro no SMTP:', error);
     return NextResponse.json({ error: 'Erro ao enviar e-mail', details: error.message }, { status: 500 });
   }
-}
+} */

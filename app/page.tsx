@@ -105,7 +105,7 @@ export default function Home() {
   }
 
   return (
-    <main className="max-w-2xl mx-auto p-6 min-h-screen text-white">
+    <main className="max-w-2xl mx-auto p-6 min-h-screen text-black">
       <header className="flex justify-between items-center mb-10">
         <div>
           <h1 className="text-3xl font-extrabold">Meu Dia</h1>

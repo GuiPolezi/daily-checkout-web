@@ -1,5 +1,37 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+Metadados Projeto
+------------------------
+Passo 1: O Backend (Supabase)
+
+Vamos usar o Supabase para o Banco de Dados e Autenticação.
+
+- Crie uma conta em supabase.com e crie um novo projeto
+- Vá até a aba SQL Editor
+- Crie as tabelas
+
+Vá em Settings > API e copie:
+- Project URL
+- anon public key.
+
+Passo 2: O Frontend (Next.js)
+- Clone o repositorio
+
+"git clone ...."
+
+- Entre na pasta e instale a biblioteca do Supabase:
+npm install @supabase/supabase-js
+
+- Crie um arquivo na raiz do projeto chamado .env.local e coloque suas chaves:
+
+Passo 3: O Código (A Lógica)
+estrutura simplificada para funcionar em um único arquivo principal para facilitar o entendimento
+
+- arquivo src/lib/supabaseClient.ts
+- Arquivo Page.tsx
+
+
+
 ## Getting Started
 
 First, run the development server:

@@ -92,6 +92,7 @@ export default function Home() {
   const submitCheckout = async () => {
     if (!session) return
     setLoading(true)
+
     const summary = {
       date: new Date().toLocaleString('pt-BR'),
       tasks: tasks.map(t => ({ title: t.title, done: t.is_completed, prio: t.priority }))
@@ -99,6 +100,7 @@ export default function Home() {
 
     const { error } = await supabase.from('reports').insert([{
       user_id: session.user.id,
+      user_email: session.user.email, // Adicionando o email aqui!
       summary: summary
     }])
 
@@ -108,6 +110,8 @@ export default function Home() {
       alert('Erro ao enviar relatório.')
     }
     setLoading(false)
+
+
   }
 
   // --- UI: LOGIN E CADASTRO ---

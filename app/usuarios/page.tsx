@@ -57,7 +57,7 @@ export default function UsersPage() {
                 className="group bg-white border border-gray-200 rounded-3xl p-6 flex flex-col items-center text-center shadow-sm hover:shadow-md hover:border-blue-200 transition-all duration-300 relative overflow-hidden"
               >
                 {/* Efeito de brilho sutil no topo do card */}
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 to-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div className="absolute top-0 left-0 w-full h-1 bg-linear-to-r from-blue-400 to-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity"></div>
 
                 {/* Avatar */}
                 <div className="relative w-24 h-24 mb-5">

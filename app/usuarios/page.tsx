@@ -66,7 +66,7 @@ export default function UsersPage() {
                     <img 
                       src={user.avatar_url || `https://ui-avatars.com/api/?name=${user.email}&background=random`} 
                       alt={`Perfil de ${user.email.split('@')[0]}`}
-                      className="w-full h-full object-cover"
+                      className="object-cover w-full"
                     />
                   </div>
                 </div>

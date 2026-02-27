@@ -183,7 +183,7 @@ export default function AdminPage() {
                               : "bg-slate-50 border-slate-100"
                           }`}
                         >
-                          <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center shadow-sm ${
+                          <div className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center shadow-sm ${
                             task.done ? "bg-emerald-500 text-white" : "bg-white border-2 border-slate-200 text-slate-300"
                           }`}>
                             {task.done ? (

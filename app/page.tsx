@@ -262,7 +262,7 @@ export default function Home() {
                 <div className="w-14 h-14 bg-slate-100 rounded-full overflow-hidden border-2 border-indigo-100 group-hover:border-indigo-500 transition-colors shadow-sm">
                   <img 
                       src={avatarUrl || `https://ui-avatars.com/api/?name=${session?.user?.email}&background=eef2ff&color=4f46e5`} 
-                      className="w-full h-full object-cover" 
+                      className="object-cover w-full" 
                       alt="Avatar"
                     />
                 </div>

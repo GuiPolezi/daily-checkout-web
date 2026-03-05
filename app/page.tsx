@@ -423,7 +423,7 @@ export default function Home() {
                                 </div>
                                 
                                 {/* Título da Tarefa */}
-                                <p className={`font-medium text-sm leading-relaxed break-all ${task.status === 'Concluída' ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
+                                <p style={{fontSize: '10px'}} className={`font-medium leading-relaxed break-all ${task.status === 'Concluída' ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
                                   {task.title}
                                 </p>
                               </div>

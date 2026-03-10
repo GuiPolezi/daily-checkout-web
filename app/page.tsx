@@ -190,7 +190,7 @@ export default function Home() {
 
     const summary = {
       date: selectedDate,
-      tasks: tasks.map(t => ({ title: t.title, done: t.is_completed, prio: t.priority }))
+      tasks: tasks.map(t => ({ title: t.title, prio: t.priority, status: t.status, done: t.status === 'Concluída' }))
     }
 
     const { error } = await supabase.from('reports').insert([{

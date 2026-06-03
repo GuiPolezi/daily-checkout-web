@@ -251,7 +251,7 @@ export default function Home() {
         ::-webkit-scrollbar-thumb { background: #D3D1C7; border-radius: 2px; }
       `}</style>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="px-4 sm:px-6 lg:px-8">
 
         {/* ─── TOPBAR ─── */}
         <header className="flex items-center justify-between py-5 border-b border-[#E8E6DF]">

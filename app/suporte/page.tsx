@@ -74,7 +74,7 @@ export default function SupportPage() {
 
   return (
     <main className="min-h-screen bg-[#FAFAFA] text-zinc-900 font-sans selection:bg-zinc-200">
-      <div className="max-w-3xl mx-auto p-6 md:py-12">
+      <div className="p-6 md:py-12">
         
         {/* Header Minimalista */}
         <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-10">

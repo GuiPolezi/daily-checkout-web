@@ -120,11 +120,11 @@ export default function SupportPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-100 flex items-start justify-center p-4 md:p-8 font-sans">
-      <div className="overflow-hidden bg-white flex min-h-[600px]">
+    <main className="h-screen w-full bg-gray-100 flex font-sans overflow-hidden">
+      <div className="bg-white flex flex-1 w-full h-full">
 
         {/* ── Sidebar ── */}
-        <aside className="w-48 shrink-0 border-r border-gray-200 bg-gray-50 flex flex-col">
+        <aside className="w-48 shrink-0 border-r border-gray-200 bg-gray-50 flex flex-col h-full">
 
           {/* Clock */}
           <div className="px-4 py-5 border-b border-gray-200">
@@ -201,7 +201,7 @@ export default function SupportPage() {
         </aside>
 
         {/* ── Main area ── */}
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 h-full">
 
           {/* Header */}
           <div className="px-6 py-4 border-b border-gray-200 flex items-baseline justify-between gap-4">

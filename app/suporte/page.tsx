@@ -121,7 +121,7 @@ export default function SupportPage() {
 
   return (
     <main className="min-h-screen bg-gray-100 flex items-start justify-center p-4 md:p-8 font-sans">
-      <div className="w-full max-w-4xl border border-gray-200 rounded-xl overflow-hidden bg-white flex min-h-[600px]">
+      <div className="overflow-hidden bg-white flex min-h-[600px]">
 
         {/* ── Sidebar ── */}
         <aside className="w-48 shrink-0 border-r border-gray-200 bg-gray-50 flex flex-col">

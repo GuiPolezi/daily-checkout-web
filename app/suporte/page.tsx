@@ -35,12 +35,11 @@ export default function SupportPage() {
     if (!session) return
     const existingCheck = completions.find(c => c.team_task_id === taskId && c.user_id === session.user.id)
 
-    // Otimista: atualiza a interface antes da resposta do banco para parecer mais rápido
     if (existingCheck) {
       setCompletions(prev => prev.filter(c => c.id !== existingCheck.id))
       await supabase.from('team_task_completions').delete().eq('id', existingCheck.id)
     } else {
-      const tempId = Math.random() // ID temporário apenas para a UI
+      const tempId = Math.random()
       setCompletions(prev => [...prev, { id: tempId, team_task_id: taskId, user_id: session.user.id, user_email: session.user.email, completion_date: todayStr }])
       await supabase.from('team_task_completions').insert([{
         team_task_id: taskId,
@@ -65,17 +64,17 @@ export default function SupportPage() {
     fetchData()
   }
 
+  // Lógica alterada: Se for 'Todos', mostra tudo. Se for um dia específico, isola estritamente as tarefas daquele dia.
   const filteredTasks = teamTasks.filter(t => 
-    selectedDay === 'Todos' ? true : t.day_of_week === selectedDay || t.day_of_week === 'Todos'
+    selectedDay === 'Todos' ? true : t.day_of_week === selectedDay
   )
 
-  // Separar tarefas concluídas das pendentes para melhor visualização
   const pendingTasks = filteredTasks.filter(t => !completions.some(c => c.team_task_id === t.id && c.user_id === session?.user.id))
   const completedTasks = filteredTasks.filter(t => completions.some(c => c.team_task_id === t.id && c.user_id === session?.user.id))
 
   return (
     <main className="min-h-screen bg-[#FAFAFA] text-zinc-900 font-sans selection:bg-zinc-200">
-      <div className="p-6 md:py-12">
+      <div className="max-w-3xl mx-auto p-6 md:py-12">
         
         {/* Header Minimalista */}
         <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-10">
@@ -150,7 +149,6 @@ export default function SupportPage() {
               </div>
             ) : (
               <div className="space-y-2">
-                {/* Renderiza Pendentes Primeiro */}
                 {[...pendingTasks, ...completedTasks].map(task => {
                   const whoCompleted = completions.filter(c => c.team_task_id === task.id)
                   const iDidIt = whoCompleted.some(c => c.user_id === session?.user.id)
@@ -196,7 +194,6 @@ export default function SupportPage() {
 
                       {/* Lado Direito: Quem completou e Ações */}
                       <div className="flex items-center gap-3 shrink-0 ml-4">
-                        {/* Avatares / Iniciais de quem fez */}
                         <div className="flex -space-x-2 overflow-hidden">
                           {whoCompleted.map(c => {
                             const initial = c.user_email.charAt(0).toUpperCase()
@@ -212,7 +209,6 @@ export default function SupportPage() {
                           })}
                         </div>
 
-                        {/* Botão Deletar (Visível apenas no hover da linha) */}
                         <button 
                           onClick={() => deleteTask(task.id)} 
                           className="text-zinc-300 hover:text-red-500 p-1.5 rounded-md transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"

@@ -95,11 +95,7 @@ export default function SupportPage() {
     fetchData()
   }
 
-  const filteredTasks = teamTasks.filter(t =>
-    selectedDay === 'Todos'
-      ? true
-      : t.day_of_week === selectedDay
-  )
+ const filteredTasks = teamTasks.filter(t => t.day_of_week === selectedDay)
 
   const pendingTasks = filteredTasks.filter(
     t => !completions.some(c => c.team_task_id === t.id && c.user_id === session?.user.id)
@@ -115,7 +111,6 @@ export default function SupportPage() {
   const ringOffset = RING_CIRCUMFERENCE - (RING_CIRCUMFERENCE * progressPct) / 100
 
   function dayCounts(day: string) {
-    if (day === 'Todos') return teamTasks.length
     return teamTasks.filter(t => t.day_of_week === day).length
   }
 

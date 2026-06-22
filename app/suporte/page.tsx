@@ -98,7 +98,7 @@ export default function SupportPage() {
   const filteredTasks = teamTasks.filter(t =>
     selectedDay === 'Todos'
       ? true
-      : t.day_of_week === selectedDay || t.day_of_week === 'Todos'
+      : t.day_of_week === selectedDay
   )
 
   const pendingTasks = filteredTasks.filter(
@@ -116,7 +116,7 @@ export default function SupportPage() {
 
   function dayCounts(day: string) {
     if (day === 'Todos') return teamTasks.length
-    return teamTasks.filter(t => t.day_of_week === day || t.day_of_week === 'Todos').length
+    return teamTasks.filter(t => t.day_of_week === day).length
   }
 
   return (

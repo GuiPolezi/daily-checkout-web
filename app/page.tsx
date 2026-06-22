@@ -29,7 +29,7 @@ const COLUMN_CONFIG = {
 
 export default function Home() {
   const [session, setSession] = useState<any>(null)
-  const [isRegistering, setIsRegistering] = useState(false)
+//  const [isRegistering, setIsRegistering] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [tasks, setTasks] = useState<Task[]>([])
@@ -70,6 +70,7 @@ export default function Home() {
     setTasks(data ? (data as Task[]) : [])
   }
 
+  /* Simplificando o Login - Removendo cadastro
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -83,6 +84,16 @@ export default function Home() {
     }
     setLoading(false)
   }
+  */
+const handleAuth = async (e: React.FormEvent) => {
+  e.preventDefault()
+  setLoading(true)
+  // Remover todo o bloco if (isRegistering) { ... } else { ... }
+  // Deixar apenas:
+  const { error } = await supabase.auth.signInWithPassword({ email, password })
+  if (error) alert('Erro no login: Verifique suas credenciais.')
+  setLoading(false)
+}
 
   const uploadAvatar = async (event: any) => {
     try {
@@ -183,10 +194,20 @@ export default function Home() {
               </svg>
             </div>
             <h1 className="font-serif-display text-3xl text-[#2C2C2A] leading-tight mb-2">
+             Bem-vindo de volta
+            </h1>
+            {/*
+            <h1 className="font-serif-display text-3xl text-[#2C2C2A] leading-tight mb-2">
               {isRegistering ? 'Criar conta' : 'Bem-vindo de volta'}
             </h1>
-            <p className="text-sm text-[#888780]">
+              */}
+              {/*
+              <p className="text-sm text-[#888780]">
               {isRegistering ? 'Junte-se ao time e organize seu dia.' : 'Entre para continuar organizando seu dia.'}
+            </p>
+               */}
+            <p className="text-sm text-[#888780]">
+              Entre para continuar organizando seu dia.
             </p>
           </div>
 
@@ -213,16 +234,18 @@ export default function Home() {
               disabled={loading}
               className="w-full bg-[#2C2C2A] text-white rounded-xl py-3 text-sm font-medium hover:bg-[#444441] active:scale-[0.99] transition-all disabled:opacity-40 mt-2"
             >
-              {loading ? 'Aguarde...' : isRegistering ? 'Criar conta' : 'Entrar'}
+              {loading ? 'Aguarde...' : 'Entrar'}
+              {/*{loading ? 'Aguarde...' : isRegistering ? 'Criar conta' : 'Entrar'} */}
             </button>
           </form>
-
+          {/*
           <button
             onClick={() => setIsRegistering(!isRegistering)}
             className="w-full mt-4 text-sm text-[#888780] hover:text-[#2C2C2A] transition-colors text-center"
           >
             {isRegistering ? 'Já tem conta? Fazer login →' : 'Não tem conta? Cadastrar →'}
           </button>
+           */}
         </div>
       </div>
     )

@@ -35,9 +35,13 @@ export default function SupportPage() {
     if (!session) return
     const existingCheck = completions.find(c => c.team_task_id === taskId && c.user_id === session.user.id)
 
+    // Otimista: atualiza a interface antes da resposta do banco para parecer mais rápido
     if (existingCheck) {
+      setCompletions(prev => prev.filter(c => c.id !== existingCheck.id))
       await supabase.from('team_task_completions').delete().eq('id', existingCheck.id)
     } else {
+      const tempId = Math.random() // ID temporário apenas para a UI
+      setCompletions(prev => [...prev, { id: tempId, team_task_id: taskId, user_id: session.user.id, user_email: session.user.email, completion_date: todayStr }])
       await supabase.from('team_task_completions').insert([{
         team_task_id: taskId,
         user_id: session.user.id,
@@ -51,7 +55,7 @@ export default function SupportPage() {
   const addTask = async () => {
     if (!newTask.trim() || !session) return
     await supabase.from('team_tasks').insert([{ title: newTask, day_of_week: selectedDay, created_by: session.user.email }])
-    setNewTask(''); 
+    setNewTask('')
     fetchData()
   }
 
@@ -65,37 +69,43 @@ export default function SupportPage() {
     selectedDay === 'Todos' ? true : t.day_of_week === selectedDay || t.day_of_week === 'Todos'
   )
 
-  // Função auxiliar para pegar a inicial do email para o avatar
-  const getInitial = (email: string) => email.charAt(0).toUpperCase()
+  // Separar tarefas concluídas das pendentes para melhor visualização
+  const pendingTasks = filteredTasks.filter(t => !completions.some(c => c.team_task_id === t.id && c.user_id === session?.user.id))
+  const completedTasks = filteredTasks.filter(t => completions.some(c => c.team_task_id === t.id && c.user_id === session?.user.id))
 
   return (
-    <main className="min-h-screen bg-[#F8F9FA] text-zinc-800 font-sans selection:bg-zinc-200">
-      <div className="max-w-3xl mx-auto p-5 md:p-10">
+    <main className="min-h-screen bg-[#FAFAFA] text-zinc-900 font-sans selection:bg-zinc-200">
+      <div className="max-w-3xl mx-auto p-6 md:py-12">
         
         {/* Header Minimalista */}
-        <header className="flex justify-between items-end mb-12">
+        <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-10">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-zinc-900">Rotina da Equipe</h1>
-            <p className="text-zinc-500 mt-1 text-sm">{todayStr.split('-').reverse().join('/')}</p>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-zinc-900">
+              Rotina da Equipe
+            </h1>
+            <p className="text-zinc-500 mt-1 text-sm">Organize e acompanhe as tarefas fixas do dia a dia.</p>
           </div>
           <Link 
             href="/" 
-            className="text-sm font-medium text-zinc-500 hover:text-zinc-900 transition-colors"
+            className="inline-flex items-center justify-center bg-white border border-zinc-200 text-zinc-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-zinc-50 hover:text-zinc-900 transition-colors shadow-sm"
           >
-            ← Voltar
+            <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Voltar
           </Link>
         </header>
 
-        {/* Abas de Dias (Pills) */}
+        {/* Seletor de Dia (Estilo "Pills") */}
         <nav className="flex gap-2 overflow-x-auto pb-4 mb-6 scrollbar-hide snap-x">
           {days.map(day => (
             <button
               key={day}
               onClick={() => setSelectedDay(day)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 whitespace-nowrap snap-start ${
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap snap-start ${
                 selectedDay === day 
-                  ? 'bg-zinc-900 text-white shadow-md' 
-                  : 'bg-white text-zinc-500 border border-zinc-200 hover:bg-zinc-100 hover:text-zinc-800'
+                  ? 'bg-zinc-900 text-white shadow-sm' 
+                  : 'bg-white text-zinc-500 border border-zinc-200 hover:bg-zinc-100 hover:text-zinc-900'
               }`}
             >
               {day}
@@ -103,21 +113,26 @@ export default function SupportPage() {
           ))}
         </nav>
 
-        {/* Input Unificado e Limpo */}
-        <div className="relative mb-10 group">
+        {/* Input de Nova Tarefa Integrado */}
+        <div className="bg-white rounded-xl shadow-sm border border-zinc-200 p-2 flex items-center mb-10 transition-shadow focus-within:ring-2 focus-within:ring-zinc-900 focus-within:border-zinc-900">
+          <div className="pl-3 text-zinc-400">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+          </div>
           <input 
             value={newTask}
             onChange={(e) => setNewTask(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && addTask()}
-            placeholder={`Adicionar nova tarefa para ${selectedDay}...`}
-            className="w-full pl-5 pr-32 py-4 bg-white border border-zinc-200 rounded-2xl shadow-sm focus:ring-2 focus:ring-zinc-900 focus:border-transparent outline-none transition-all text-zinc-800 placeholder-zinc-400"
+            placeholder={`Adicionar nova rotina em "${selectedDay}"...`}
+            className="flex-1 px-3 py-2 outline-none text-sm bg-transparent placeholder-zinc-400"
           />
           <button 
             onClick={addTask} 
             disabled={!newTask.trim()}
-            className="absolute right-2 top-2 bottom-2 px-5 bg-zinc-900 text-white rounded-xl text-sm font-medium hover:bg-zinc-800 active:scale-95 transition-all disabled:opacity-0 disabled:pointer-events-none"
+            className="bg-zinc-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-zinc-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Criar
+            Adicionar
           </button>
         </div>
 
@@ -125,90 +140,112 @@ export default function SupportPage() {
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 space-y-3">
             <div className="w-8 h-8 border-2 border-zinc-200 border-t-zinc-900 rounded-full animate-spin"></div>
+            <p className="text-zinc-400 text-sm">Sincronizando tarefas...</p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-6">
             {filteredTasks.length === 0 ? (
-              <div className="text-center py-16 bg-transparent rounded-2xl border-2 border-dashed border-zinc-200">
-                <p className="text-zinc-400 text-sm">Tudo limpo para <strong>{selectedDay}</strong>.</p>
+              <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-zinc-300">
+                <p className="text-zinc-500 text-sm">Nenhuma rotina configurada para <strong>{selectedDay}</strong>.</p>
               </div>
             ) : (
-              filteredTasks.map(task => {
-                const whoCompleted = completions.filter(c => c.team_task_id === task.id)
-                const iDidIt = whoCompleted.some(c => c.user_id === session?.user.id)
+              <div className="space-y-2">
+                {/* Renderiza Pendentes Primeiro */}
+                {[...pendingTasks, ...completedTasks].map(task => {
+                  const whoCompleted = completions.filter(c => c.team_task_id === task.id)
+                  const iDidIt = whoCompleted.some(c => c.user_id === session?.user.id)
 
-                return (
-                  <div 
-                    key={task.id} 
-                    className={`group flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 md:p-5 rounded-2xl transition-all duration-300 ${
-                      iDidIt 
-                        ? 'bg-transparent border border-transparent opacity-60 hover:opacity-100' 
-                        : 'bg-white border border-zinc-200 shadow-sm hover:shadow-md'
-                    }`}
-                  >
-                    <div className="flex items-center gap-4 flex-1">
-                      {/* Círculo de Check Minimalista */}
-                      <button 
-                        onClick={() => toggleCheck(task.id)}
-                        className={`shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${
-                          iDidIt 
-                            ? 'bg-zinc-800 border-zinc-800 text-white' 
-                            : 'border-zinc-300 text-transparent hover:border-zinc-400'
-                        }`}
-                      >
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3.5}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
-                      </button>
-                      
-                      {/* Título da Tarefa */}
-                      <div className="flex flex-col">
-                        <span className={`text-base font-medium transition-all duration-300 ${
-                          iDidIt ? 'text-zinc-400 line-through' : 'text-zinc-800'
-                        }`}>
-                          {task.title}
-                        </span>
-                        {task.day_of_week !== 'Todos' && selectedDay === 'Todos' && (
-                          <span className="text-[10px] text-zinc-400 font-semibold uppercase tracking-wider mt-0.5">
-                            {task.day_of_week}
+                  return (
+                    <div 
+                      key={task.id} 
+                      className={`group flex items-center justify-between p-4 bg-white border rounded-xl transition-all duration-200 ${
+                        iDidIt 
+                          ? 'border-zinc-100 opacity-60 bg-zinc-50/50 hover:opacity-100' 
+                          : 'border-zinc-200 shadow-sm hover:border-zinc-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-4 flex-1 min-w-0">
+                        {/* Checkbox Customizado */}
+                        <button 
+                          onClick={() => toggleCheck(task.id)}
+                          className={`shrink-0 w-6 h-6 rounded-full border flex items-center justify-center transition-all duration-200 ${
+                            iDidIt 
+                              ? 'bg-zinc-900 border-zinc-900 text-white' 
+                              : 'bg-white border-zinc-300 text-transparent hover:border-zinc-400 hover:bg-zinc-50'
+                          }`}
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        </button>
+
+                        {/* Título e Badge */}
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 truncate">
+                          <span className={`text-sm md:text-base font-medium truncate transition-colors ${
+                            iDidIt ? 'text-zinc-400 line-through' : 'text-zinc-800'
+                          }`}>
+                            {task.title}
                           </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between sm:justify-end gap-4 pl-10 sm:pl-0">
-                      {/* Avatares de quem concluiu */}
-                      <div className="flex -space-x-2">
-                        {whoCompleted.map((c) => (
-                          <div 
-                            key={c.id} 
-                            title={c.user_email}
-                            className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white border-2 border-[#F8F9FA] shadow-sm ${
-                              c.user_id === session?.user.id ? 'bg-zinc-900 z-10' : 'bg-zinc-400'
-                            }`}
-                          >
-                            {getInitial(c.user_email)}
-                          </div>
-                        ))}
+                          {selectedDay === 'Todos' && task.day_of_week !== 'Todos' && (
+                            <span className="shrink-0 px-2 py-0.5 rounded text-[10px] font-medium bg-zinc-100 text-zinc-500 uppercase tracking-wide">
+                              {task.day_of_week}
+                            </span>
+                          )}
+                        </div>
                       </div>
 
-                      {/* Botão de Excluir (Aparece no Hover) */}
-                      <button 
-                        onClick={() => deleteTask(task.id)} 
-                        className="text-zinc-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 p-1"
-                        title="Remover rotina"
-                      >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
+                      {/* Lado Direito: Quem completou e Ações */}
+                      <div className="flex items-center gap-3 shrink-0 ml-4">
+                        {/* Avatares / Iniciais de quem fez */}
+                        <div className="flex -space-x-2 overflow-hidden">
+                          {whoCompleted.map(c => {
+                            const initial = c.user_email.charAt(0).toUpperCase()
+                            return (
+                              <div 
+                                key={c.id} 
+                                title={c.user_email}
+                                className="inline-block w-7 h-7 rounded-full bg-zinc-200 border-2 border-white flex items-center justify-center text-[10px] font-bold text-zinc-600"
+                              >
+                                {initial}
+                              </div>
+                            )
+                          })}
+                        </div>
+
+                        {/* Botão Deletar (Visível apenas no hover da linha) */}
+                        <button 
+                          onClick={() => deleteTask(task.id)} 
+                          className="text-zinc-300 hover:text-red-500 p-1.5 rounded-md transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                          title="Excluir rotina"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                )
-              })
+                  )
+                })}
+              </div>
             )}
           </div>
         )}
+
+        {/* Footer Minimalista */}
+        <div className="mt-12 p-5 bg-white border border-zinc-200 rounded-xl flex gap-4 items-start shadow-sm">
+          <div className="bg-zinc-100 p-2 rounded-lg shrink-0">
+            <svg className="w-5 h-5 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div>
+            <h3 className="font-medium text-zinc-900 text-sm">Como usar as Rotinas</h3>
+            <p className="text-sm text-zinc-500 mt-1 leading-relaxed">
+              Adicione processos recorrentes da equipe. Marque o círculo para confirmar a conclusão no dia atual. Tarefas concluídas descem para o final da lista para manter seu foco no que falta.
+            </p>
+          </div>
+        </div>
+
       </div>
     </main>
   )

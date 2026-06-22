@@ -1,18 +1,26 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/src/lib/supabaseClient'
 import Link from 'next/link'
+
+const DAYS = ['Todos', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo']
+const DAY_NAMES = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
+const MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
+
+const RING_CIRCUMFERENCE = 201 // 2π × r32
 
 export default function SupportPage() {
   const [session, setSession] = useState<any>(null)
   const [teamTasks, setTeamTasks] = useState<any[]>([])
   const [completions, setCompletions] = useState<any[]>([])
   const [newTask, setNewTask] = useState('')
-  const [selectedDay, setSelectedDay] = useState('Todos')
+  const [selectedDay, setSelectedDay] = useState(() => DAY_NAMES[new Date().getDay()])
   const [loading, setLoading] = useState(true)
+  const [clock, setClock] = useState('')
+  const [clockDate, setClockDate] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
 
   const todayStr = new Date().toISOString().split('T')[0]
-  const days = ['Todos', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo']
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -21,10 +29,30 @@ export default function SupportPage() {
     })
   }, [])
 
+  useEffect(() => {
+    function tick() {
+      const n = new Date()
+      const h = String(n.getHours()).padStart(2, '0')
+      const m = String(n.getMinutes()).padStart(2, '0')
+      const s = String(n.getSeconds()).padStart(2, '0')
+      setClock(`${h}:${m}:${s}`)
+      setClockDate(`${DAY_NAMES[n.getDay()]}, ${n.getDate()} ${MONTHS[n.getMonth()]}`)
+    }
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [])
+
   async function fetchData() {
     setLoading(true)
-    const { data: tasks } = await supabase.from('team_tasks').select('*').order('created_at', { ascending: true })
-    const { data: doneToday } = await supabase.from('team_task_completions').select('*').eq('completion_date', todayStr)
+    const { data: tasks } = await supabase
+      .from('team_tasks')
+      .select('*')
+      .order('created_at', { ascending: true })
+    const { data: doneToday } = await supabase
+      .from('team_task_completions')
+      .select('*')
+      .eq('completion_date', todayStr)
 
     if (tasks) setTeamTasks(tasks)
     if (doneToday) setCompletions(doneToday)
@@ -33,19 +61,17 @@ export default function SupportPage() {
 
   const toggleCheck = async (taskId: number) => {
     if (!session) return
-    const existingCheck = completions.find(c => c.team_task_id === taskId && c.user_id === session.user.id)
-
-    if (existingCheck) {
-      setCompletions(prev => prev.filter(c => c.id !== existingCheck.id))
-      await supabase.from('team_task_completions').delete().eq('id', existingCheck.id)
+    const existing = completions.find(
+      c => c.team_task_id === taskId && c.user_id === session.user.id
+    )
+    if (existing) {
+      await supabase.from('team_task_completions').delete().eq('id', existing.id)
     } else {
-      const tempId = Math.random()
-      setCompletions(prev => [...prev, { id: tempId, team_task_id: taskId, user_id: session.user.id, user_email: session.user.email, completion_date: todayStr }])
       await supabase.from('team_task_completions').insert([{
         team_task_id: taskId,
         user_id: session.user.id,
         user_email: session.user.email,
-        completion_date: todayStr
+        completion_date: todayStr,
       }])
     }
     fetchData()
@@ -53,196 +79,329 @@ export default function SupportPage() {
 
   const addTask = async () => {
     if (!newTask.trim() || !session) return
-    await supabase.from('team_tasks').insert([{ title: newTask, day_of_week: selectedDay, created_by: session.user.email }])
+    await supabase.from('team_tasks').insert([{
+      title: newTask,
+      day_of_week: selectedDay,
+      created_by: session.user.email,
+    }])
     setNewTask('')
+    inputRef.current?.focus()
     fetchData()
   }
 
   const deleteTask = async (id: number) => {
-    if (!confirm('Tem certeza que deseja remover esta rotina?')) return
+    if (!confirm('Remover esta tarefa?')) return
     await supabase.from('team_tasks').delete().eq('id', id)
     fetchData()
   }
 
-  // Lógica alterada: Se for 'Todos', mostra tudo. Se for um dia específico, isola estritamente as tarefas daquele dia.
-  const filteredTasks = teamTasks.filter(t => 
-    selectedDay === 'Todos' ? true : t.day_of_week === selectedDay
+  const filteredTasks = teamTasks.filter(t =>
+    selectedDay === 'Todos'
+      ? true
+      : t.day_of_week === selectedDay || t.day_of_week === 'Todos'
   )
 
-  const pendingTasks = filteredTasks.filter(t => !completions.some(c => c.team_task_id === t.id && c.user_id === session?.user.id))
-  const completedTasks = filteredTasks.filter(t => completions.some(c => c.team_task_id === t.id && c.user_id === session?.user.id))
+  const pendingTasks = filteredTasks.filter(
+    t => !completions.some(c => c.team_task_id === t.id && c.user_id === session?.user.id)
+  )
+  const doneTasks = filteredTasks.filter(
+    t => completions.some(c => c.team_task_id === t.id && c.user_id === session?.user.id)
+  )
+
+  const progressPct = filteredTasks.length === 0
+    ? 0
+    : Math.round((doneTasks.length / filteredTasks.length) * 100)
+
+  const ringOffset = RING_CIRCUMFERENCE - (RING_CIRCUMFERENCE * progressPct) / 100
+
+  function dayCounts(day: string) {
+    if (day === 'Todos') return teamTasks.length
+    return teamTasks.filter(t => t.day_of_week === day || t.day_of_week === 'Todos').length
+  }
 
   return (
-    <main className="min-h-screen bg-[#FAFAFA] text-zinc-900 font-sans selection:bg-zinc-200">
-      <div className="p-6 md:py-12">
-        
-        {/* Header Minimalista */}
-        <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-10">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-zinc-900">
-              Rotina da Equipe
-            </h1>
-            <p className="text-zinc-500 mt-1 text-sm">Organize e acompanhe as tarefas fixas do dia a dia.</p>
-          </div>
-          <Link 
-            href="/" 
-            className="inline-flex items-center justify-center bg-white border border-zinc-200 text-zinc-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-zinc-50 hover:text-zinc-900 transition-colors shadow-sm"
-          >
-            <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            Voltar
-          </Link>
-        </header>
+    <main className="min-h-screen bg-gray-100 flex items-start justify-center p-4 md:p-8 font-sans">
+      <div className="w-full max-w-4xl border border-gray-200 rounded-xl overflow-hidden bg-white flex min-h-[600px]">
 
-        {/* Seletor de Dia (Estilo "Pills") */}
-        <nav className="flex gap-2 overflow-x-auto pb-4 mb-6 scrollbar-hide snap-x">
-          {days.map(day => (
-            <button
-              key={day}
-              onClick={() => setSelectedDay(day)}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap snap-start ${
-                selectedDay === day 
-                  ? 'bg-zinc-900 text-white shadow-sm' 
-                  : 'bg-white text-zinc-500 border border-zinc-200 hover:bg-zinc-100 hover:text-zinc-900'
-              }`}
+        {/* ── Sidebar ── */}
+        <aside className="w-48 shrink-0 border-r border-gray-200 bg-gray-50 flex flex-col">
+
+          {/* Clock */}
+          <div className="px-4 py-5 border-b border-gray-200">
+            <div className="font-mono text-2xl font-medium text-gray-900 tracking-tight leading-none">
+              {clock}
+            </div>
+            <div className="font-mono text-[11px] text-gray-400 mt-1.5">
+              {clockDate}
+            </div>
+          </div>
+
+          {/* Progress ring */}
+          <div className="px-4 py-5 border-b border-gray-200 flex flex-col items-center gap-2">
+            <span className="text-[11px] text-gray-400">progresso do dia</span>
+            <svg width="80" height="80" viewBox="0 0 80 80">
+              <circle
+                cx="40" cy="40" r="32"
+                fill="none" stroke="#e5e7eb" strokeWidth="5"
+              />
+              <circle
+                cx="40" cy="40" r="32"
+                fill="none"
+                stroke={progressPct === 100 ? '#22c55e' : '#111827'}
+                strokeWidth="5"
+                strokeLinecap="round"
+                strokeDasharray={RING_CIRCUMFERENCE}
+                strokeDashoffset={ringOffset}
+                transform="rotate(-90 40 40)"
+                style={{ transition: 'stroke-dashoffset 0.5s ease, stroke 0.3s ease' }}
+              />
+            </svg>
+            <div className="font-mono text-lg font-medium text-gray-900">{progressPct}%</div>
+            <div className="text-[11px] text-gray-400">
+              {doneTasks.length} / {filteredTasks.length} tarefas
+            </div>
+          </div>
+
+          {/* Day navigation */}
+          <nav className="flex-1 py-2 overflow-y-auto">
+            {DAYS.map(day => (
+              <button
+                key={day}
+                onClick={() => setSelectedDay(day)}
+                className={`w-full flex items-center justify-between px-4 py-[7px] text-[13px] border-l-2 transition-all ${
+                  selectedDay === day
+                    ? 'border-gray-900 text-gray-900 font-medium bg-white'
+                    : 'border-transparent text-gray-500 hover:text-gray-900 hover:bg-white'
+                }`}
+              >
+                {day}
+                <span className={`text-[11px] font-mono px-1.5 py-0.5 rounded border transition-all ${
+                  selectedDay === day
+                    ? 'bg-gray-900 text-white border-gray-900'
+                    : 'bg-gray-100 text-gray-400 border-gray-200'
+                }`}>
+                  {dayCounts(day)}
+                </span>
+              </button>
+            ))}
+          </nav>
+
+          {/* Back link */}
+          <div className="px-4 py-3 border-t border-gray-200">
+            <Link
+              href="/"
+              className="flex items-center gap-1.5 text-[12px] text-gray-400 hover:text-gray-900 transition-colors"
             >
-              {day}
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              início
+            </Link>
+          </div>
+        </aside>
+
+        {/* ── Main area ── */}
+        <div className="flex-1 flex flex-col min-w-0">
+
+          {/* Header */}
+          <div className="px-6 py-4 border-b border-gray-200 flex items-baseline justify-between gap-4">
+            <span className="text-sm font-medium text-gray-900">{selectedDay}</span>
+            <span className="text-xs font-mono text-gray-400">
+              — {filteredTasks.length} tarefa{filteredTasks.length !== 1 ? 's' : ''}
+            </span>
+          </div>
+
+          {/* Add task bar */}
+          <div className="px-6 py-3 border-b border-gray-200 bg-gray-50 flex gap-2">
+            <input
+              ref={inputRef}
+              value={newTask}
+              onChange={e => setNewTask(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && addTask()}
+              placeholder="Descreva a tarefa..."
+              className="flex-1 text-[13px] px-3 py-1.5 border border-gray-200 rounded-lg bg-white text-gray-900 outline-none placeholder-gray-400 focus:border-gray-400 focus:ring-2 focus:ring-gray-100 transition-all"
+            />
+            <button
+              onClick={addTask}
+              disabled={!newTask.trim() || !session}
+              className="text-[13px] px-4 py-1.5 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 active:scale-95 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              + Adicionar
             </button>
-          ))}
-        </nav>
-
-        {/* Input de Nova Tarefa Integrado */}
-        <div className="bg-white rounded-xl shadow-sm border border-zinc-200 p-2 flex items-center mb-10 transition-shadow focus-within:ring-2 focus-within:ring-zinc-900 focus-within:border-zinc-900">
-          <div className="pl-3 text-zinc-400">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-            </svg>
           </div>
-          <input 
-            value={newTask}
-            onChange={(e) => setNewTask(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && addTask()}
-            placeholder={`Adicionar nova rotina em "${selectedDay}"...`}
-            className="flex-1 px-3 py-2 outline-none text-sm bg-transparent placeholder-zinc-400"
-          />
-          <button 
-            onClick={addTask} 
-            disabled={!newTask.trim()}
-            className="bg-zinc-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-zinc-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Adicionar
-          </button>
-        </div>
 
-        {/* Lista de Tarefas */}
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-20 space-y-3">
-            <div className="w-8 h-8 border-2 border-zinc-200 border-t-zinc-900 rounded-full animate-spin"></div>
-            <p className="text-zinc-400 text-sm">Sincronizando tarefas...</p>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {filteredTasks.length === 0 ? (
-              <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-zinc-300">
-                <p className="text-zinc-500 text-sm">Nenhuma rotina configurada para <strong>{selectedDay}</strong>.</p>
+          {/* Task list */}
+          <div className="flex-1 overflow-y-auto">
+            {loading ? (
+              <div className="flex items-center justify-center gap-3 py-16">
+                <div className="w-4 h-4 border-[1.5px] border-gray-200 border-t-gray-600 rounded-full animate-spin" />
+                <span className="text-sm text-gray-400">Carregando...</span>
+              </div>
+            ) : filteredTasks.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 gap-2 text-center px-6">
+                <svg className="w-6 h-6 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                </svg>
+                <p className="text-sm text-gray-400">
+                  Nenhuma tarefa para <strong className="text-gray-600">{selectedDay}</strong>.
+                </p>
               </div>
             ) : (
-              <div className="space-y-2">
-                {[...pendingTasks, ...completedTasks].map(task => {
-                  const whoCompleted = completions.filter(c => c.team_task_id === task.id)
-                  const iDidIt = whoCompleted.some(c => c.user_id === session?.user.id)
-
-                  return (
-                    <div 
-                      key={task.id} 
-                      className={`group flex items-center justify-between p-4 bg-white border rounded-xl transition-all duration-200 ${
-                        iDidIt 
-                          ? 'border-zinc-100 opacity-60 bg-zinc-50/50 hover:opacity-100' 
-                          : 'border-zinc-200 shadow-sm hover:border-zinc-300'
-                      }`}
-                    >
-                      <div className="flex items-center gap-4 flex-1 min-w-0">
-                        {/* Checkbox Customizado */}
-                        <button 
-                          onClick={() => toggleCheck(task.id)}
-                          className={`shrink-0 w-6 h-6 rounded-full border flex items-center justify-center transition-all duration-200 ${
-                            iDidIt 
-                              ? 'bg-zinc-900 border-zinc-900 text-white' 
-                              : 'bg-white border-zinc-300 text-transparent hover:border-zinc-400 hover:bg-zinc-50'
-                          }`}
-                        >
-                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                          </svg>
-                        </button>
-
-                        {/* Título e Badge */}
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 truncate">
-                          <span className={`text-sm md:text-base font-medium truncate transition-colors ${
-                            iDidIt ? 'text-zinc-400 line-through' : 'text-zinc-800'
-                          }`}>
-                            {task.title}
-                          </span>
-                          {selectedDay === 'Todos' && task.day_of_week !== 'Todos' && (
-                            <span className="shrink-0 px-2 py-0.5 rounded text-[10px] font-medium bg-zinc-100 text-zinc-500 uppercase tracking-wide">
-                              {task.day_of_week}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Lado Direito: Quem completou e Ações */}
-                      <div className="flex items-center gap-3 shrink-0 ml-4">
-                        <div className="flex -space-x-2 overflow-hidden">
-                          {whoCompleted.map(c => {
-                            const initial = c.user_email.charAt(0).toUpperCase()
-                            return (
-                              <div 
-                                key={c.id} 
-                                title={c.user_email}
-                                className="inline-block w-7 h-7 rounded-full bg-zinc-200 border-2 border-white flex items-center justify-center text-[10px] font-bold text-zinc-600"
-                              >
-                                {initial}
-                              </div>
-                            )
-                          })}
-                        </div>
-
-                        <button 
-                          onClick={() => deleteTask(task.id)} 
-                          className="text-zinc-300 hover:text-red-500 p-1.5 rounded-md transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
-                          title="Excluir rotina"
-                        >
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
+              <>
+                {pendingTasks.length > 0 && (
+                  <TaskSection
+                    label="pendentes"
+                    tasks={pendingTasks}
+                    completions={completions}
+                    session={session}
+                    showBadge={selectedDay === 'Todos'}
+                    onToggle={toggleCheck}
+                    onDelete={deleteTask}
+                  />
+                )}
+                {doneTasks.length > 0 && (
+                  <TaskSection
+                    label="concluídas"
+                    tasks={doneTasks}
+                    completions={completions}
+                    session={session}
+                    showBadge={selectedDay === 'Todos'}
+                    onToggle={toggleCheck}
+                    onDelete={deleteTask}
+                  />
+                )}
+              </>
             )}
           </div>
-        )}
 
-        {/* Footer Minimalista */}
-        <div className="mt-12 p-5 bg-white border border-zinc-200 rounded-xl flex gap-4 items-start shadow-sm">
-          <div className="bg-zinc-100 p-2 rounded-lg shrink-0">
-            <svg className="w-5 h-5 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <div>
-            <h3 className="font-medium text-zinc-900 text-sm">Como usar as Rotinas</h3>
-            <p className="text-sm text-zinc-500 mt-1 leading-relaxed">
-              Adicione processos recorrentes da equipe. Marque o círculo para confirmar a conclusão no dia atual. Tarefas concluídas descem para o final da lista para manter seu foco no que falta.
-            </p>
-          </div>
         </div>
-
       </div>
     </main>
+  )
+}
+
+function TaskSection({
+  label,
+  tasks,
+  completions,
+  session,
+  showBadge,
+  onToggle,
+  onDelete,
+}: {
+  label: string
+  tasks: any[]
+  completions: any[]
+  session: any
+  showBadge: boolean
+  onToggle: (id: number) => void
+  onDelete: (id: number) => void
+}) {
+  return (
+    <>
+      <div className="flex items-center gap-3 px-6 py-2.5 bg-gray-50 border-b border-gray-200">
+        <span className="text-[11px] font-mono text-gray-400 tracking-wide">
+          {label} — {tasks.length}
+        </span>
+        <div className="flex-1 h-px bg-gray-200" />
+      </div>
+
+      {tasks.map((task, i) => (
+        <TaskRow
+          key={task.id}
+          task={task}
+          index={i}
+          completions={completions}
+          session={session}
+          showBadge={showBadge}
+          onToggle={() => onToggle(task.id)}
+          onDelete={() => onDelete(task.id)}
+        />
+      ))}
+    </>
+  )
+}
+
+function TaskRow({
+  task,
+  index,
+  completions,
+  session,
+  showBadge,
+  onToggle,
+  onDelete,
+}: {
+  task: any
+  index: number
+  completions: any[]
+  session: any
+  showBadge: boolean
+  onToggle: () => void
+  onDelete: () => void
+}) {
+  const whoCompleted = completions.filter(c => c.team_task_id === task.id)
+  const iDidIt = whoCompleted.some(c => c.user_id === session?.user.id)
+
+  return (
+    <div
+      onClick={onToggle}
+      className="group flex items-center px-6 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors min-h-[44px]"
+    >
+      {/* Row number */}
+      <span className={`w-7 shrink-0 font-mono text-[11px] select-none ${
+        iDidIt ? 'text-gray-200' : 'text-gray-400'
+      }`}>
+        {String(index + 1).padStart(2, '0')}
+      </span>
+
+      {/* Checkbox */}
+      <div className={`w-4 h-4 shrink-0 border rounded-sm flex items-center justify-center mr-3 transition-all ${
+        iDidIt
+          ? 'bg-green-500 border-green-500'
+          : 'border-gray-300 group-hover:border-gray-500'
+      }`}>
+        {iDidIt && (
+          <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        )}
+      </div>
+
+      {/* Title */}
+      <span className={`flex-1 text-[13px] py-3 leading-snug transition-colors ${
+        iDidIt ? 'text-gray-400 line-through' : 'text-gray-800'
+      }`}>
+        {task.title}
+      </span>
+
+      {/* Day badge */}
+      {showBadge && (
+        <span className="shrink-0 ml-3 text-[10px] font-mono text-gray-400 bg-gray-100 border border-gray-200 px-2 py-0.5 rounded-sm">
+          {task.day_of_week === 'Todos' ? 'todo dia' : task.day_of_week}
+        </span>
+      )}
+
+      {/* Who completed */}
+      {whoCompleted.length > 0 && (
+        <div className="shrink-0 ml-2 flex gap-1">
+          {whoCompleted.map(c => (
+            <span key={c.id} className="text-[11px] font-mono text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded-sm">
+              {c.user_email.split('@')[0]}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Delete */}
+      <button
+        onClick={e => { e.stopPropagation(); onDelete() }}
+        className="ml-3 shrink-0 opacity-0 group-hover:opacity-100 focus:opacity-100 p-1 rounded text-gray-300 hover:text-red-500 transition-all"
+        title="Remover"
+      >
+        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
   )
 }

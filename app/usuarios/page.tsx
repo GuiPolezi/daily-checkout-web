@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { supabase } from '@/src/lib/supabaseClient'
-import Link from 'next/link'
+import TopNav from '@/app/components/TopNav'
 
 export default function UsersPage() {
   const [users, setUsers] = useState<any[]>([])
@@ -19,82 +19,74 @@ export default function UsersPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 text-gray-900 font-sans selection:bg-blue-100 selection:text-blue-900">
-      <div className="max-w-6xl mx-auto p-6 md:p-8">
-        
-        {/* Header */}
-        <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-gray-900">
-              Time <span className="text-blue-600">&</span> Performance
-            </h1>
-            <p className="text-gray-500 mt-1 text-sm md:text-base">Métricas e produtividade da equipe</p>
-          </div>
-          <Link 
-            href="/" 
-            className="inline-flex items-center justify-center bg-white border border-gray-200 text-gray-700 px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm"
-          >
-            Voltar ao Início
-          </Link>
-        </header>
+    <main className="min-h-screen pb-16">
+      <TopNav />
 
-        {/* Loading State */}
+      <div className="w-full px-4 sm:px-6 lg:px-10">
+
+        {/* ─── HERO ─── */}
+        <section className="rise pt-8 pb-6 sm:pt-10">
+          <p className="eyebrow mb-2">Pessoas</p>
+          <h1 className="text-3xl font-semibold tracking-tight text-ink sm:text-4xl">Equipe</h1>
+          <p className="mt-2 text-sm text-ink-2">Métricas e produtividade de cada membro do time.</p>
+        </section>
+
+        {/* ─── ESTADOS ─── */}
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <div className="w-10 h-10 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin"></div>
-            <p className="mt-4 text-gray-500 text-sm font-medium">Carregando dados da equipe...</p>
+          <div className="glass rounded-[1.75rem] px-6 py-20 text-center">
+            <div className="mx-auto mb-5 h-9 w-9 animate-spin rounded-full border-[3px] border-fill-2 border-t-accent"></div>
+            <p className="text-sm text-ink-2">Carregando dados da equipe...</p>
           </div>
         ) : users.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-3xl border border-dashed border-gray-300">
-            <p className="text-gray-500">Nenhum membro da equipe encontrado.</p>
+          <div className="glass rounded-[1.75rem] border border-dashed border-ink-4 px-6 py-20 text-center">
+            <svg className="mx-auto mb-4 text-ink-4" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+            <p className="text-sm text-ink-2">Nenhum membro da equipe encontrado.</p>
           </div>
         ) : (
-          /* Grid de Usuários */
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {users.map((user) => (
-              <div 
-                key={user.id} 
-                className="group bg-white border border-gray-200 rounded-3xl p-6 flex flex-col items-center text-center shadow-sm hover:shadow-md hover:border-blue-200 transition-all duration-300 relative overflow-hidden"
+          /* ─── GRID DE USUÁRIOS ─── */
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+            {users.map((user, i) => (
+              <div
+                key={user.id}
+                className="glass rise group flex flex-col items-center rounded-[1.75rem] p-6 text-center transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_20px_44px_-18px_rgba(23,52,92,0.3)] sm:p-7"
+                style={{ animationDelay: `${Math.min(i, 8) * 50}ms` }}
               >
-                {/* Efeito de brilho sutil no topo do card */}
-                <div className="absolute top-0 left-0 w-full h-1 bg-linear-to-r from-blue-400 to-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-
-                {/* Avatar */}
-                <div className="relative w-24 h-24 mb-5">
-                  <div className="absolute inset-0 bg-blue-100 rounded-full blur-md opacity-0 group-hover:opacity-50 transition-opacity duration-300"></div>
-                  <div className="relative w-full h-full rounded-full overflow-hidden border-4 border-white shadow-md bg-gray-100 ring-2 ring-transparent group-hover:ring-blue-100 transition-all">
-                    <img 
-                      src={user.avatar_url || `https://ui-avatars.com/api/?name=${user.email}&background=random`} 
+                {/* Avatar com brilho aero */}
+                <div className="relative mb-5 h-24 w-24">
+                  <div className="absolute -inset-2 rounded-full bg-linear-to-b from-aero/40 to-success/30 opacity-0 blur-xl transition-opacity duration-300 group-hover:opacity-100"></div>
+                  <div className="relative h-full w-full overflow-hidden rounded-full bg-fill shadow-[0_10px_24px_-10px_rgba(23,52,92,0.35)] ring-4 ring-white/80 transition-all duration-300 group-hover:ring-accent/40 dark:ring-white/15">
+                    <img
+                      src={user.avatar_url || `https://ui-avatars.com/api/?name=${user.email}&background=007AFF&color=fff&size=128`}
                       alt={`Perfil de ${user.email.split('@')[0]}`}
-                      className="object-cover w-full"
+                      className="h-full w-full object-cover"
                     />
                   </div>
                 </div>
 
-                {/* Info do Usuário */}
-                <h2 className="font-bold text-lg text-gray-900 truncate w-full">
+                {/* Identificação */}
+                <h2 className="w-full truncate text-lg font-semibold capitalize tracking-tight text-ink">
                   {user.email.split('@')[0]}
                 </h2>
-                <p className="text-[11px] text-gray-400 font-semibold tracking-wider mb-6 truncate w-full px-2">
+                <p className="mb-6 mt-0.5 w-full truncate px-2 text-[12px] text-ink-3">
                   {user.email}
                 </p>
 
                 {/* Estatísticas */}
-                <div className="flex gap-3 w-full mt-auto pt-4 border-t border-gray-100">
-                  <div className="flex-1 bg-gray-50 rounded-2xl p-3 flex flex-col items-center justify-center transition-colors group-hover:bg-blue-50/50">
-                    <p className="text-2xl font-black text-gray-800 group-hover:text-blue-600 transition-colors">
+                <div className="mt-auto flex w-full gap-3 border-t border-separator pt-5">
+                  <div className="flex flex-1 flex-col items-center justify-center gap-1.5 rounded-2xl bg-fill-soft px-3 py-4 transition-colors duration-300 group-hover:bg-accent/10">
+                    <p className="text-2xl font-semibold tabular-nums leading-none tracking-tight text-ink transition-colors group-hover:text-accent">
                       {user.total_tasks}
                     </p>
-                    <p className="text-[10px] font-bold text-gray-500 uppercase mt-1 text-center">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-ink-3">
                       Total
                     </p>
                   </div>
-                  
-                  <div className="flex-1 bg-gray-50 rounded-2xl p-3 flex flex-col items-center justify-center transition-colors group-hover:bg-green-50/50">
-                    <p className="text-2xl font-black text-gray-800 group-hover:text-green-600 transition-colors">
+
+                  <div className="flex flex-1 flex-col items-center justify-center gap-1.5 rounded-2xl bg-fill-soft px-3 py-4 transition-colors duration-300 group-hover:bg-success/12">
+                    <p className="text-2xl font-semibold tabular-nums leading-none tracking-tight text-ink transition-colors group-hover:text-success">
                       {user.tasks_today}
                     </p>
-                    <p className="text-[10px] font-bold text-gray-500 uppercase mt-1 text-center">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-ink-3">
                       Hoje
                     </p>
                   </div>

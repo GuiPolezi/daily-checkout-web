@@ -1,26 +1,504 @@
 @import "tailwindcss";
 
+/* Permite usar variantes dark: — o tema é controlado por html[data-theme] */
+@custom-variant dark (&:where(html[data-theme="dark"], html[data-theme="dark"] *));
+
+/* ════════════════════════════════════════════════════════
+   Design System — "Liquid Glass"
+   iOS / macOS + Frutiger Aero · temas claro e escuro
+   ════════════════════════════════════════════════════════ */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Paleta do sistema iOS — claro */
+  --ios-blue: #007aff;
+  --ios-blue-strong: #0062df;
+  --ios-teal: #32ade6;
+  --ios-green: #34c759;
+  --ios-orange: #ff9500;
+  --ios-red: #ff3b30;
+  --ios-gray: #8e8e93;
+
+  /* Hierarquia de texto (Apple label colors) */
+  --ink: #1d1d1f;
+  --ink-2: rgba(60, 60, 67, 0.68);
+  --ink-3: rgba(60, 60, 67, 0.46);
+  --ink-4: rgba(60, 60, 67, 0.26);
+
+  /* Superfícies e preenchimentos */
+  --surface: rgba(255, 255, 255, 0.94);
+  --surface-2: rgba(255, 255, 255, 0.55);
+  --fill-soft: rgba(120, 120, 128, 0.08);
+  --fill: rgba(120, 120, 128, 0.13);
+  --fill-2: rgba(120, 120, 128, 0.22);
+
+  /* Divisórias: discretas por padrão, quase invisíveis na versão soft */
+  --separator: rgba(60, 60, 67, 0.07);
+  --separator-soft: rgba(60, 60, 67, 0.045);
+
+  --card-border: rgba(20, 40, 70, 0.09);
+  --card-shadow: 0 1px 2px rgba(16, 42, 67, 0.05), 0 8px 20px -10px rgba(16, 42, 67, 0.14);
+
+  /* Chips coloridos (fundo + texto com contraste por tema) */
+  --chip-accent-bg: rgba(0, 122, 255, 0.13);
+  --chip-accent-text: #0066d6;
+  --chip-success-bg: rgba(52, 199, 89, 0.17);
+  --chip-success-text: #1e8c3f;
+  --chip-warn-bg: rgba(255, 149, 0, 0.19);
+  --chip-warn-text: #ad5700;
+  --chip-danger-bg: rgba(255, 59, 48, 0.14);
+  --chip-danger-text: #d70015;
+
+  --glass-a: rgba(255, 255, 255, 0.78);
+  --glass-b: rgba(255, 255, 255, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.65);
+  --glass-highlight: rgba(255, 255, 255, 0.85);
+  --glass-shadow: 0 14px 34px -16px rgba(23, 52, 92, 0.16);
+
+  --panel-a: rgba(255, 255, 255, 0.5);
+  --panel-b: rgba(255, 255, 255, 0.34);
+
+  --background: #eef4fa;
+  --foreground: var(--ink);
+}
+
+/* Tokens do tema escuro (aplicados via atributo OU preferência do sistema) */
+html[data-theme="dark"] {
+  --ios-blue: #0a84ff;
+  --ios-blue-strong: #3395ff;
+  --ios-teal: #64d2ff;
+  --ios-green: #30d158;
+  --ios-orange: #ff9f0a;
+  --ios-red: #ff453a;
+  --ios-gray: #98989d;
+
+  --ink: #f5f5f7;
+  --ink-2: rgba(235, 235, 245, 0.72);
+  --ink-3: rgba(235, 235, 245, 0.5);
+  --ink-4: rgba(235, 235, 245, 0.28);
+
+  --surface: rgba(56, 58, 66, 0.94);
+  --surface-2: rgba(255, 255, 255, 0.05);
+  --fill-soft: rgba(120, 120, 128, 0.16);
+  --fill: rgba(120, 120, 128, 0.26);
+  --fill-2: rgba(120, 120, 128, 0.38);
+
+  --separator: rgba(235, 235, 245, 0.1);
+  --separator-soft: rgba(235, 235, 245, 0.06);
+
+  --card-border: rgba(255, 255, 255, 0.1);
+  --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 20px -10px rgba(0, 0, 0, 0.5);
+
+  --chip-accent-bg: rgba(10, 132, 255, 0.24);
+  --chip-accent-text: #7cc0ff;
+  --chip-success-bg: rgba(48, 209, 88, 0.22);
+  --chip-success-text: #6fe393;
+  --chip-warn-bg: rgba(255, 159, 10, 0.22);
+  --chip-warn-text: #ffc25e;
+  --chip-danger-bg: rgba(255, 69, 58, 0.22);
+  --chip-danger-text: #ff8d85;
+
+  --glass-a: rgba(34, 37, 44, 0.82);
+  --glass-b: rgba(26, 28, 34, 0.68);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-highlight: rgba(255, 255, 255, 0.08);
+  --glass-shadow: 0 14px 34px -16px rgba(0, 0, 0, 0.6);
+
+  --panel-a: rgba(40, 43, 50, 0.6);
+  --panel-b: rgba(30, 32, 38, 0.5);
+
+  --background: #0f1216;
+  --foreground: var(--ink);
+}
+
+/* Fallback: navegador em modo escuro sem escolha explícita de tema claro */
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme="light"]) {
+    --ios-blue: #0a84ff;
+    --ios-blue-strong: #3395ff;
+    --ios-teal: #64d2ff;
+    --ios-green: #30d158;
+    --ios-orange: #ff9f0a;
+    --ios-red: #ff453a;
+    --ios-gray: #98989d;
+
+    --ink: #f5f5f7;
+    --ink-2: rgba(235, 235, 245, 0.72);
+    --ink-3: rgba(235, 235, 245, 0.5);
+    --ink-4: rgba(235, 235, 245, 0.28);
+
+    --surface: rgba(56, 58, 66, 0.94);
+    --surface-2: rgba(255, 255, 255, 0.05);
+    --fill-soft: rgba(120, 120, 128, 0.16);
+    --fill: rgba(120, 120, 128, 0.26);
+    --fill-2: rgba(120, 120, 128, 0.38);
+
+    --separator: rgba(235, 235, 245, 0.1);
+    --separator-soft: rgba(235, 235, 245, 0.06);
+
+    --card-border: rgba(255, 255, 255, 0.1);
+    --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 20px -10px rgba(0, 0, 0, 0.5);
+
+    --chip-accent-bg: rgba(10, 132, 255, 0.24);
+    --chip-accent-text: #7cc0ff;
+    --chip-success-bg: rgba(48, 209, 88, 0.22);
+    --chip-success-text: #6fe393;
+    --chip-warn-bg: rgba(255, 159, 10, 0.22);
+    --chip-warn-text: #ffc25e;
+    --chip-danger-bg: rgba(255, 69, 58, 0.22);
+    --chip-danger-text: #ff8d85;
+
+    --glass-a: rgba(34, 37, 44, 0.82);
+    --glass-b: rgba(26, 28, 34, 0.68);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --glass-highlight: rgba(255, 255, 255, 0.08);
+    --glass-shadow: 0 14px 34px -16px rgba(0, 0, 0, 0.6);
+
+    --panel-a: rgba(40, 43, 50, 0.6);
+    --panel-b: rgba(30, 32, 38, 0.5);
+
+    --background: #0f1216;
+  }
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-ink-4: var(--ink-4);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-fill-soft: var(--fill-soft);
+  --color-fill: var(--fill);
+  --color-fill-2: var(--fill-2);
+  --color-separator: var(--separator);
+  --color-separator-soft: var(--separator-soft);
+  --color-accent: var(--ios-blue);
+  --color-aero: var(--ios-teal);
+  --color-success: var(--ios-green);
+  --color-warn: var(--ios-orange);
+  --color-danger: var(--ios-red);
+  --font-sans: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", "Cascadia Mono", monospace;
 }
 
+html {
+  color-scheme: light;
+}
+html[data-theme="dark"] {
+  color-scheme: dark;
+}
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  html:not([data-theme="light"]) {
+    color-scheme: dark;
   }
 }
 
+/* Bloqueia qualquer estouro horizontal sem quebrar position:sticky */
+html,
 body {
-  background: var(--background);
+  overflow-x: clip;
+}
+
+body {
+  background-color: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Aurora de fundo (Frutiger Aero): halos suaves de azul, ciano e menta */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(52rem 36rem at 88% -12%, rgba(50, 173, 230, 0.22), transparent 62%),
+    radial-gradient(48rem 34rem at -12% 15%, rgba(0, 122, 255, 0.16), transparent 58%),
+    radial-gradient(44rem 32rem at 55% 115%, rgba(52, 199, 89, 0.14), transparent 62%),
+    linear-gradient(180deg, #f3f8fd 0%, #edf4fb 45%, #f6fafe 100%);
+}
+
+html[data-theme="dark"] body::before {
+  background:
+    radial-gradient(52rem 36rem at 88% -12%, rgba(10, 132, 255, 0.17), transparent 62%),
+    radial-gradient(48rem 34rem at -12% 15%, rgba(100, 210, 255, 0.09), transparent 58%),
+    radial-gradient(44rem 32rem at 55% 115%, rgba(48, 209, 88, 0.08), transparent 62%),
+    linear-gradient(180deg, #12161c 0%, #10141a 45%, #0d1015 100%);
+}
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme="light"]) body::before {
+    background:
+      radial-gradient(52rem 36rem at 88% -12%, rgba(10, 132, 255, 0.17), transparent 62%),
+      radial-gradient(48rem 34rem at -12% 15%, rgba(100, 210, 255, 0.09), transparent 58%),
+      radial-gradient(44rem 32rem at 55% 115%, rgba(48, 209, 88, 0.08), transparent 62%),
+      linear-gradient(180deg, #12161c 0%, #10141a 45%, #0d1015 100%);
+  }
+}
+
+::selection {
+  background: rgba(0, 122, 255, 0.25);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: var(--ink-4);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+@layer base {
+  /* Tailwind v4 não força cursor em botões — aqui todo controle clicável vira "clicker" */
+  button:not(:disabled),
+  select,
+  summary,
+  [role="button"] {
+    cursor: pointer;
+  }
+}
+
+@layer components {
+  /* Superfície de vidro (usa backdrop-filter) */
+  .glass {
+    background: linear-gradient(180deg, var(--glass-a), var(--glass-b));
+    -webkit-backdrop-filter: blur(22px) saturate(180%);
+    backdrop-filter: blur(22px) saturate(180%);
+    border: 1px solid var(--glass-border);
+    box-shadow:
+      inset 0 1px 0 var(--glass-highlight),
+      var(--glass-shadow);
+  }
+
+  /* Vidro sem backdrop-filter — obrigatório em volta de drag-and-drop:
+     backdrop-filter em um ancestral desloca elementos position:fixed (preview do drag) */
+  .panel {
+    background: linear-gradient(180deg, var(--panel-a), var(--panel-b));
+    border: 1px solid var(--glass-border);
+    box-shadow:
+      inset 0 1px 0 var(--glass-highlight),
+      var(--glass-shadow);
+  }
+
+  /* Cartão sólido interno (tarefas, linhas de lista) */
+  .card {
+    background-color: var(--surface);
+    border: 1px solid var(--card-border);
+    box-shadow: var(--card-shadow);
+  }
+
+  /* Botões pill (referência: alerta Save / Delete / Cancel do UI Kit iOS) */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 9999px;
+    padding: 0.7rem 1.35rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.25;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition:
+      transform 0.15s ease,
+      background-color 0.2s ease,
+      box-shadow 0.2s ease,
+      filter 0.2s ease,
+      opacity 0.2s ease;
+  }
+  .btn:hover {
+    transform: translateY(-1px);
+  }
+  .btn:active {
+    transform: translateY(0) scale(0.96);
+  }
+  .btn:disabled {
+    opacity: 0.45;
+    pointer-events: none;
+  }
+  .btn:focus-visible {
+    outline: 2px solid rgba(10, 132, 255, 0.6);
+    outline-offset: 2px;
+  }
+
+  .btn-primary {
+    color: #fff;
+    background-color: var(--ios-blue);
+    background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 55%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.35),
+      0 10px 22px -10px rgba(0, 118, 246, 0.6);
+  }
+  .btn-primary:hover {
+    background-color: var(--ios-blue-strong);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.35),
+      0 14px 28px -10px rgba(0, 118, 246, 0.75);
+  }
+
+  .btn-warn {
+    color: #fff;
+    background-color: var(--ios-orange);
+    background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0) 55%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.35),
+      0 10px 22px -10px rgba(255, 149, 0, 0.55);
+  }
+  .btn-warn:hover {
+    filter: brightness(1.05);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.35),
+      0 14px 28px -10px rgba(255, 149, 0, 0.7);
+  }
+
+  .btn-secondary {
+    color: var(--ink);
+    background-color: var(--fill);
+  }
+  .btn-secondary:hover {
+    background-color: var(--fill-2);
+  }
+
+  .btn-danger-soft {
+    color: var(--chip-danger-text);
+    background-color: var(--chip-danger-bg);
+  }
+  .btn-danger-soft:hover {
+    filter: brightness(0.97);
+  }
+
+  .btn-ghost {
+    color: var(--ink-2);
+    background-color: transparent;
+  }
+  .btn-ghost:hover {
+    background-color: var(--fill);
+    color: var(--ink);
+  }
+
+  /* Campo preenchido estilo iOS */
+  .field {
+    width: 100%;
+    background-color: var(--fill);
+    border: 1px solid transparent;
+    border-radius: 1.1rem;
+    padding: 0.8rem 1.1rem;
+    font-size: 0.9rem;
+    color: var(--ink);
+    outline: none;
+    transition:
+      background-color 0.2s ease,
+      border-color 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+  .field::placeholder {
+    color: var(--ink-3);
+  }
+  .field:hover {
+    background-color: var(--fill-2);
+  }
+  .field:focus {
+    background-color: var(--surface);
+    border-color: var(--ios-blue);
+    box-shadow: 0 0 0 4px rgba(10, 132, 255, 0.16);
+  }
+
+  /* Chips / etiquetas */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border-radius: 9999px;
+    padding: 0.34rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+  .chip-neutral {
+    background-color: var(--fill);
+    color: var(--ink-2);
+  }
+  .chip-accent {
+    background-color: var(--chip-accent-bg);
+    color: var(--chip-accent-text);
+  }
+  .chip-success {
+    background-color: var(--chip-success-bg);
+    color: var(--chip-success-text);
+  }
+  .chip-warn {
+    background-color: var(--chip-warn-bg);
+    color: var(--chip-warn-text);
+  }
+  .chip-danger {
+    background-color: var(--chip-danger-bg);
+    color: var(--chip-danger-text);
+  }
+
+  .eyebrow {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--ios-blue);
+  }
+}
+
+/* ── Helpers ─────────────────────────────────────────── */
+
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Torna toda a pílula de data clicável (o indicador nativo cobre o campo, invisível) */
+.date-input {
+  position: relative;
+}
+.date-input::-webkit-calendar-picker-indicator {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.rise {
+  animation: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise {
+    animation: none;
+  }
 }

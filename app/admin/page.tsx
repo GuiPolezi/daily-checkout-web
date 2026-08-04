@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { supabase } from '@/src/lib/supabaseClient'
-import Link from 'next/link'
+import TopNav from '@/app/components/TopNav'
 
 export default function AdminPage() {
   const [reports, setReports] = useState<any[]>([])
@@ -19,7 +19,7 @@ export default function AdminPage() {
     let result = reports
 
     if (filterEmail) {
-      result = result.filter(r => 
+      result = result.filter(r =>
         r.user_email?.toLowerCase().includes(filterEmail.toLowerCase())
       )
     }
@@ -46,60 +46,54 @@ export default function AdminPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#F8FAFC] text-slate-900 font-sans">
-      <div className="max-w-6xl mx-auto p-6 md:p-10">
-        
-        {/* Header */}
-        <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
-          <div>
-            <div className="flex items-center gap-3 mb-1">
-              <div className="w-2 h-8 bg-indigo-600 rounded-full"></div>
-              <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">Painel de Controle</h1>
-            </div>
-            <p className="text-slate-500 text-sm md:text-base">Monitoramento de relatórios e entregas da equipe</p>
-          </div>
-          <Link 
-            href="/" 
-            className="group flex items-center gap-2 bg-white border border-slate-200 text-slate-600 px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-slate-50 hover:text-indigo-600 transition-all shadow-sm"
-          >
-            <span className="group-hover:-translate-x-1 transition-transform">←</span> Voltar ao App
-          </Link>
-        </header>
+    <main className="min-h-screen pb-16">
+      <TopNav />
 
-        {/* Filtros */}
-        <section className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 mb-10">
-          <div className="flex items-center gap-2 mb-4 text-indigo-600">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-            </svg>
-            <span className="text-xs font-bold uppercase tracking-widest">Filtros de Busca</span>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="text-[11px] font-bold text-slate-400 uppercase ml-1">Colaborador</label>
-              <input 
-                type="text" 
-                placeholder="Busque por e-mail..."
-                value={filterEmail}
-                onChange={(e) => setFilterEmail(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 p-3.5 rounded-2xl outline-none focus:ring-2 ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm"
-              />
+      <div className="w-full px-4 sm:px-6 lg:px-10">
+
+        {/* ─── HERO ─── */}
+        <section className="rise pt-8 pb-6 sm:pt-10">
+          <p className="eyebrow mb-2">Relatórios</p>
+          <h1 className="text-3xl font-semibold tracking-tight text-ink sm:text-4xl">Histórico</h1>
+          <p className="mt-2 text-sm text-ink-2">Monitoramento de relatórios e entregas da equipe.</p>
+        </section>
+
+        {/* ─── FILTROS ─── */}
+        <section className="glass rise mb-8 rounded-[1.75rem] p-5 sm:p-6" style={{ animationDelay: '60ms' }}>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5">
+            <div>
+              <label htmlFor="filter-email" className="mb-2 ml-1 block text-xs font-semibold uppercase tracking-wider text-ink-3">
+                Colaborador
+              </label>
+              <div className="relative">
+                <svg className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-ink-3" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+                <input
+                  id="filter-email"
+                  type="text"
+                  placeholder="Buscar por e-mail..."
+                  value={filterEmail}
+                  onChange={(e) => setFilterEmail(e.target.value)}
+                  className="field rounded-full pl-11"
+                />
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-[11px] font-bold text-slate-400 uppercase ml-1">Data do Relatório</label>
-              <div className="flex gap-2">
-                <input 
-                  type="date" 
+            <div>
+              <label htmlFor="filter-date" className="mb-2 ml-1 block text-xs font-semibold uppercase tracking-wider text-ink-3">
+                Data do relatório
+              </label>
+              <div className="flex gap-2.5">
+                <input
+                  id="filter-date"
+                  type="date"
                   value={filterDate}
                   onChange={(e) => setFilterDate(e.target.value)}
-                  className="flex-1 bg-slate-50 border border-slate-200 p-3.5 rounded-2xl outline-none focus:ring-2 ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm text-slate-600"
+                  className="field date-input flex-1 cursor-pointer rounded-full"
                 />
                 {filterDate && (
-                  <button 
+                  <button
                     onClick={() => setFilterDate('')}
-                    className="bg-slate-100 hover:bg-slate-200 text-slate-600 px-4 rounded-2xl text-xs font-bold transition-colors"
+                    className="btn btn-secondary px-5 text-[13px]"
                   >
                     Limpar
                   </button>
@@ -109,104 +103,120 @@ export default function AdminPage() {
           </div>
         </section>
 
-        {/* Listagem */}
-        <div className="space-y-6">
-          <div className="flex justify-between items-center px-2">
-            <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest">
-              Registros Encontrados: <span className="text-indigo-600">{filteredReports.length}</span>
+        {/* ─── LISTAGEM ─── */}
+        <div className="space-y-5">
+          <div className="flex items-center gap-2.5 px-2">
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-ink-3">
+              Registros encontrados
             </h2>
+            <span className="chip chip-accent tabular-nums">{filteredReports.length}</span>
           </div>
 
           {loading ? (
-            <div className="py-20 text-center bg-white rounded-3xl border border-slate-200 shadow-sm">
-              <div className="w-10 h-10 border-4 border-slate-200 border-t-indigo-600 rounded-full animate-spin mx-auto mb-4"></div>
-              <p className="text-slate-500 font-medium italic">Consultando base de dados...</p>
+            <div className="glass rounded-[1.75rem] px-6 py-20 text-center">
+              <div className="mx-auto mb-5 h-9 w-9 animate-spin rounded-full border-[3px] border-fill-2 border-t-accent"></div>
+              <p className="text-sm text-ink-2">Consultando base de dados...</p>
             </div>
           ) : filteredReports.length === 0 ? (
-            <div className="bg-white py-20 rounded-3xl border border-dashed border-slate-300 text-center shadow-sm">
-              <span className="text-4xl mb-4 block">🔍</span>
-              <p className="text-slate-500 font-medium">Nenhum relatório corresponde aos filtros aplicados.</p>
-              <button onClick={() => {setFilterEmail(''); setFilterDate('')}} className="mt-4 text-indigo-600 text-sm font-bold hover:underline">Limpar todos os filtros</button>
+            <div className="glass rounded-[1.75rem] border border-dashed border-ink-4 px-6 py-20 text-center">
+              <svg className="mx-auto mb-4 text-ink-4" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+              <p className="text-sm text-ink-2">Nenhum relatório corresponde aos filtros aplicados.</p>
+              <button
+                onClick={() => { setFilterEmail(''); setFilterDate('') }}
+                className="btn btn-secondary mx-auto mt-5 text-[13px]"
+              >
+                Limpar todos os filtros
+              </button>
             </div>
           ) : (
-            filteredReports.map((report) => {
+            filteredReports.map((report, i) => {
               const totalTasks = report.summary.tasks.length;
               const completedTasks = report.summary.tasks.filter((t: any) => t.done).length;
-              const percent = Math.round((completedTasks / totalTasks) * 100);
+              const percent = totalTasks ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
               return (
-                <div key={report.id} className="group bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm hover:shadow-md hover:border-indigo-200 transition-all duration-300">
-                  <div className="p-6 md:p-8">
-                    {/* Topo do Card */}
-                    <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-8">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 font-bold text-xl shadow-inner">
-                          {report.user_email[0].toUpperCase()}
-                        </div>
-                        <div>
-                          <p className="font-extrabold text-lg text-slate-800 leading-tight mb-1 group-hover:text-indigo-600 transition-colors">
-                            {report.user_email}
-                          </p>
-                          <div className="flex flex-wrap items-center gap-3">
-                            <span className="bg-slate-100 text-slate-600 text-[10px] font-bold px-2.5 py-1 rounded-lg uppercase tracking-wider flex items-center gap-1">
-                              📅 {new Date(report.summary.date + 'T00:00:00').toLocaleDateString('pt-BR')}
-                            </span>
-                            <span className="text-[11px] text-slate-400 font-medium">
-                              Enviado em: {new Date(report.created_at).toLocaleString('pt-BR')}
-                            </span>
-                          </div>
-                        </div>
+                <div
+                  key={report.id}
+                  className="glass rise rounded-[1.75rem] p-5 transition-all duration-300 hover:shadow-[0_20px_44px_-18px_rgba(23,52,92,0.28)] sm:p-7 lg:p-8"
+                  style={{ animationDelay: `${Math.min(i, 6) * 50}ms` }}
+                >
+                  {/* Topo do card */}
+                  <div className="mb-7 flex flex-col justify-between gap-5 md:flex-row md:items-start md:gap-8">
+                    <div className="flex min-w-0 items-center gap-4">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-linear-to-b from-[#3aa0ff] to-[#007aff] text-lg font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.4),0_8px_18px_-8px_rgba(0,122,255,0.6)]">
+                        {report.user_email[0].toUpperCase()}
                       </div>
-
-                      <div className="w-full md:w-auto bg-slate-50 md:bg-transparent p-4 md:p-0 rounded-2xl flex flex-row md:flex-col items-center md:items-end justify-between gap-1">
-                        <div className="text-3xl font-black text-indigo-600 tabular-nums">
-                          {completedTasks}<span className="text-slate-300 text-lg font-medium mx-1">/</span>{totalTasks}
-                        </div>
-                        <div className="flex flex-col items-end">
-                           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Taxa de Conclusão</p>
-                           <div className="w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                              <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${percent}%` }}></div>
-                           </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-[15px] font-semibold text-ink">
+                          {report.user_email}
+                        </p>
+                        <div className="mt-2 flex flex-wrap items-center gap-2.5">
+                          <span className="chip chip-neutral px-3 py-1.5">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="4"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                            {new Date(report.summary.date + 'T00:00:00').toLocaleDateString('pt-BR')}
+                          </span>
+                          <span className="chip chip-neutral px-3 py-1.5">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+                            Enviado em {new Date(report.created_at).toLocaleString('pt-BR')}
+                          </span>
                         </div>
                       </div>
                     </div>
 
-                    {/* Lista de Tarefas Estilizada */}
-                    <div className="grid grid-cols-1 gap-3">
-                      <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Detalhes da Entrega</p>
-                      {report.summary.tasks.map((task: any, index: number) => (
-                        <div 
-                          key={index} 
-                          className={`flex items-center gap-4 p-3 rounded-2xl border transition-colors ${
-                            task.done 
-                              ? "bg-emerald-50/30 border-emerald-100/50" 
-                              : "bg-slate-50 border-slate-100"
-                          }`}
-                        >
-                          <div className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center shadow-sm ${
-                            task.done ? "bg-emerald-500 text-white" : "bg-white border-2 border-slate-200 text-slate-300"
-                          }`}>
-                            {task.done ? (
-                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={4}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                              </svg>
-                            ) : (
-                              <div className="w-1.5 h-1.5 bg-slate-200 rounded-full"></div>
-                            )}
-                          </div>
-                          
-                          <span className={`flex-1 text-sm font-semibold ${task.done ? "text-slate-700" : "text-slate-400 line-through decoration-slate-300"}`}>
-                            {task.title}
-                          </span>
+                    {/* Taxa de conclusão */}
+                    <div className="flex w-full shrink-0 items-center justify-between gap-5 rounded-2xl bg-fill-soft px-5 py-4 md:w-auto">
+                      <div className="text-2xl font-semibold tabular-nums tracking-tight text-ink">
+                        {completedTasks}
+                        <span className="mx-1 text-lg font-normal text-ink-4">/</span>
+                        <span className="text-lg text-ink-2">{totalTasks}</span>
+                      </div>
+                      <div className="flex flex-col items-end gap-2">
+                        <p className="text-[11px] font-semibold uppercase tracking-widest text-ink-3">
+                          {percent}% concluído
+                        </p>
+                        <div className="h-1.5 w-28 overflow-hidden rounded-full bg-fill">
+                          <div
+                            className="h-full rounded-full bg-linear-to-r from-accent to-aero"
+                            style={{ width: `${percent}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
 
-                          {task.prio === 'Urgente' && (
-                            <span className="text-[9px] font-black px-2 py-0.5 rounded-md bg-red-100 text-red-600 border border-red-200 uppercase tracking-tighter shadow-sm">
-                              🔥 {task.prio}
-                            </span>
+                  {/* Lista de tarefas */}
+                  <div className="grid grid-cols-1 gap-2.5">
+                    <p className="ml-1 mb-1 text-xs font-semibold uppercase tracking-widest text-ink-3">
+                      Detalhes da entrega
+                    </p>
+                    {report.summary.tasks.map((task: any, index: number) => (
+                      <div
+                        key={index}
+                        className={`flex items-center gap-3.5 rounded-2xl border px-4 py-3 ${
+                          task.done
+                            ? 'border-success/20 bg-success/10'
+                            : 'border-separator bg-fill-soft'
+                        }`}
+                      >
+                        <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${
+                          task.done
+                            ? 'bg-success text-white shadow-[0_4px_10px_-3px_rgba(52,199,89,0.6)]'
+                            : 'border-2 border-ink-4 bg-surface'
+                        }`}>
+                          {task.done && (
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7"/></svg>
                           )}
                         </div>
-                      ))}
-                    </div>
+
+                        <span className={`min-w-0 flex-1 text-sm ${task.done ? 'font-medium text-ink' : 'text-ink-2'}`}>
+                          {task.title}
+                        </span>
+
+                        {task.prio === 'Urgente' && (
+                          <span className="chip chip-danger">Urgente</span>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </div>
               );

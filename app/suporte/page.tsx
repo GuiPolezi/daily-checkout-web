@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/src/lib/supabaseClient'
-import Link from 'next/link'
+import TopNav from '@/app/components/TopNav'
 
 const DAYS = ['Todos', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo']
 const DAY_NAMES = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
@@ -16,6 +16,7 @@ export default function SupportPage() {
   const [newTask, setNewTask] = useState('')
   const [selectedDay, setSelectedDay] = useState(() => DAY_NAMES[new Date().getDay()])
   const [loading, setLoading] = useState(true)
+  const [dayMenuOpen, setDayMenuOpen] = useState(false)
   const [clock, setClock] = useState('')
   const [clockDate, setClockDate] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
@@ -95,7 +96,7 @@ export default function SupportPage() {
     fetchData()
   }
 
- const filteredTasks = teamTasks.filter(t => t.day_of_week === selectedDay)
+  const filteredTasks = teamTasks.filter(t => t.day_of_week === selectedDay)
 
   const pendingTasks = filteredTasks.filter(
     t => !completions.some(c => c.team_task_id === t.id && c.user_id === session?.user.id)
@@ -114,161 +115,214 @@ export default function SupportPage() {
     return teamTasks.filter(t => t.day_of_week === day).length
   }
 
+  const selectDay = (day: string) => {
+    setSelectedDay(day)
+    setDayMenuOpen(false)
+  }
+
+  const dayButton = (day: string) => (
+    <button
+      key={day}
+      onClick={() => selectDay(day)}
+      className={`flex w-full items-center justify-between gap-2 rounded-full px-4 py-2.5 text-[13px] font-medium transition-all duration-200 ${
+        selectedDay === day
+          ? 'bg-accent text-white shadow-[0_6px_16px_-6px_rgba(0,122,255,0.5)]'
+          : 'text-ink-2 hover:bg-fill hover:text-ink'
+      }`}
+    >
+      {day}
+      <span className={`flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold tabular-nums ${
+        selectedDay === day ? 'bg-white/25 text-white' : 'bg-fill text-ink-3'
+      }`}>
+        {dayCounts(day)}
+      </span>
+    </button>
+  )
+
   return (
-    <main className="h-screen w-full bg-gray-100 flex font-sans overflow-hidden">
-      <div className="bg-white flex flex-1 w-full h-full">
+    <main className="min-h-screen pb-16">
+      <TopNav />
 
-        {/* ── Sidebar ── */}
-        <aside className="w-48 shrink-0 border-r border-gray-200 bg-gray-50 flex flex-col h-full">
+      <div className="w-full px-4 sm:px-6 lg:px-10">
 
-          {/* Clock */}
-          <div className="px-4 py-5 border-b border-gray-200">
-            <div className="font-mono text-2xl font-medium text-gray-900 tracking-tight leading-none">
-              {clock}
-            </div>
-            <div className="font-mono text-[11px] text-gray-400 mt-1.5">
-              {clockDate}
-            </div>
-          </div>
-
-          {/* Progress ring */}
-          <div className="px-4 py-5 border-b border-gray-200 flex flex-col items-center gap-2">
-            <span className="text-[11px] text-gray-400">progresso do dia</span>
-            <svg width="80" height="80" viewBox="0 0 80 80">
-              <circle
-                cx="40" cy="40" r="32"
-                fill="none" stroke="#e5e7eb" strokeWidth="5"
-              />
-              <circle
-                cx="40" cy="40" r="32"
-                fill="none"
-                stroke={progressPct === 100 ? '#22c55e' : '#111827'}
-                strokeWidth="5"
-                strokeLinecap="round"
-                strokeDasharray={RING_CIRCUMFERENCE}
-                strokeDashoffset={ringOffset}
-                transform="rotate(-90 40 40)"
-                style={{ transition: 'stroke-dashoffset 0.5s ease, stroke 0.3s ease' }}
-              />
-            </svg>
-            <div className="font-mono text-lg font-medium text-gray-900">{progressPct}%</div>
-            <div className="text-[11px] text-gray-400">
-              {doneTasks.length} / {filteredTasks.length} tarefas
-            </div>
-          </div>
-
-          {/* Day navigation */}
-          <nav className="flex-1 py-2 overflow-y-auto">
-            {DAYS.map(day => (
-              <button
-                key={day}
-                onClick={() => setSelectedDay(day)}
-                className={`w-full flex items-center justify-between px-4 py-[7px] text-[13px] border-l-2 transition-all ${
-                  selectedDay === day
-                    ? 'border-gray-900 text-gray-900 font-medium bg-white'
-                    : 'border-transparent text-gray-500 hover:text-gray-900 hover:bg-white'
-                }`}
-              >
-                {day}
-                <span className={`text-[11px] font-mono px-1.5 py-0.5 rounded border transition-all ${
-                  selectedDay === day
-                    ? 'bg-gray-900 text-white border-gray-900'
-                    : 'bg-gray-100 text-gray-400 border-gray-200'
-                }`}>
-                  {dayCounts(day)}
-                </span>
-              </button>
-            ))}
-          </nav>
-
-          {/* Back link */}
-          <div className="px-4 py-3 border-t border-gray-200">
-            <Link
-              href="/"
-              className="flex items-center gap-1.5 text-[12px] text-gray-400 hover:text-gray-900 transition-colors"
-            >
-              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-              início
-            </Link>
-          </div>
-        </aside>
-
-        {/* ── Main area ── */}
-        <div className="flex-1 flex flex-col min-w-0 h-full">
-
-          {/* Header */}
-          <div className="px-6 py-4 border-b border-gray-200 flex items-baseline justify-between gap-4">
-            <span className="text-sm font-medium text-gray-900">{selectedDay}</span>
-            <span className="text-xs font-mono text-gray-400">
-              — {filteredTasks.length} tarefa{filteredTasks.length !== 1 ? 's' : ''}
-            </span>
-          </div>
-
-          {/* Add task bar */}
-          <div className="px-6 py-3 border-b border-gray-200 bg-gray-50 flex gap-2">
-            <input
-              ref={inputRef}
-              value={newTask}
-              onChange={e => setNewTask(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && addTask()}
-              placeholder="Descreva a tarefa..."
-              className="flex-1 text-[13px] px-3 py-1.5 border border-gray-200 rounded-lg bg-white text-gray-900 outline-none placeholder-gray-400 focus:border-gray-400 focus:ring-2 focus:ring-gray-100 transition-all"
-            />
-            <button
-              onClick={addTask}
-              disabled={!newTask.trim() || !session}
-              className="text-[13px] px-4 py-1.5 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 active:scale-95 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-            >
-              + Adicionar
-            </button>
-          </div>
-
-          {/* Task list */}
-          <div className="flex-1 overflow-y-auto">
-            {loading ? (
-              <div className="flex items-center justify-center gap-3 py-16">
-                <div className="w-4 h-4 border-[1.5px] border-gray-200 border-t-gray-600 rounded-full animate-spin" />
-                <span className="text-sm text-gray-400">Carregando...</span>
+        {/* ─── HERO ─── */}
+        <section className="rise pt-8 pb-6 sm:pt-10">
+          <p className="eyebrow mb-2">Equipe</p>
+          <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
+            <h1 className="text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
+              Rotina da Equipe
+            </h1>
+            <div className="text-right">
+              <div className="text-2xl font-semibold tabular-nums leading-none tracking-tight text-ink">
+                {clock}
               </div>
-            ) : filteredTasks.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 gap-2 text-center px-6">
-                <svg className="w-6 h-6 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+              <div className="mt-1.5 text-[12px] text-ink-2">{clockDate}</div>
+            </div>
+          </div>
+        </section>
+
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[300px_minmax(0,1fr)] lg:items-start lg:gap-5">
+
+          {/* ─── SIDEBAR ─── */}
+          <aside className="flex min-w-0 flex-col gap-4">
+
+            {/* Progresso do dia */}
+            <div className="glass rise flex items-center gap-5 rounded-[1.75rem] p-5 sm:p-6 lg:flex-col lg:gap-4 lg:py-7" style={{ animationDelay: '60ms' }}>
+              <div className="relative h-24 w-24 shrink-0">
+                <svg width="96" height="96" viewBox="0 0 80 80" className="h-full w-full">
+                  <defs>
+                    <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#0A84FF" />
+                      <stop offset="100%" stopColor="#32ADE6" />
+                    </linearGradient>
+                  </defs>
+                  <circle
+                    cx="40" cy="40" r="32"
+                    fill="none" strokeWidth="6"
+                    style={{ stroke: 'var(--fill-2)' }}
+                  />
+                  <circle
+                    cx="40" cy="40" r="32"
+                    fill="none"
+                    strokeWidth="6"
+                    strokeLinecap="round"
+                    strokeDasharray={RING_CIRCUMFERENCE}
+                    strokeDashoffset={ringOffset}
+                    transform="rotate(-90 40 40)"
+                    style={{
+                      stroke: progressPct === 100 ? 'var(--ios-green)' : 'url(#ringGrad)',
+                      transition: 'stroke-dashoffset 0.5s ease, stroke 0.3s ease',
+                    }}
+                  />
                 </svg>
-                <p className="text-sm text-gray-400">
-                  Nenhuma tarefa para <strong className="text-gray-600">{selectedDay}</strong>.
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-lg font-semibold tabular-nums text-ink">{progressPct}%</span>
+                </div>
+              </div>
+              <div className="min-w-0 lg:text-center">
+                <p className="text-sm font-semibold text-ink">Progresso do dia</p>
+                <p className="mt-1 text-[13px] leading-relaxed text-ink-2">
+                  {doneTasks.length} de {filteredTasks.length} tarefa{filteredTasks.length !== 1 ? 's' : ''} concluída{doneTasks.length !== 1 ? 's' : ''}
                 </p>
               </div>
-            ) : (
-              <>
-                {pendingTasks.length > 0 && (
-                  <TaskSection
-                    label="pendentes"
-                    tasks={pendingTasks}
-                    completions={completions}
-                    session={session}
-                    showBadge={selectedDay === 'Todos'}
-                    onToggle={toggleCheck}
-                    onDelete={deleteTask}
-                  />
-                )}
-                {doneTasks.length > 0 && (
-                  <TaskSection
-                    label="concluídas"
-                    tasks={doneTasks}
-                    completions={completions}
-                    session={session}
-                    showBadge={selectedDay === 'Todos'}
-                    onToggle={toggleCheck}
-                    onDelete={deleteTask}
-                  />
-                )}
-              </>
-            )}
-          </div>
+            </div>
 
+            {/* Seletor de dia — mobile (menu expansível) */}
+            <div className="rise lg:hidden" style={{ animationDelay: '80ms' }}>
+              <button
+                onClick={() => setDayMenuOpen(v => !v)}
+                aria-expanded={dayMenuOpen}
+                className="glass flex w-full items-center justify-between rounded-[1.35rem] px-5 py-4 text-sm font-semibold text-ink transition-transform active:scale-[0.99]"
+              >
+                <span className="flex items-center gap-3">
+                  <svg className="text-ink-2" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                    <path d="M4 7h16M4 12h16M4 17h16" />
+                  </svg>
+                  {selectedDay === 'Todos' ? 'Todos os dias' : selectedDay}
+                </span>
+                <span className="flex items-center gap-2.5">
+                  <span className="chip chip-accent tabular-nums">{filteredTasks.length}</span>
+                  <svg
+                    className={`text-ink-3 transition-transform duration-200 ${dayMenuOpen ? 'rotate-180' : ''}`}
+                    width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                  >
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
+                </span>
+              </button>
+
+              {dayMenuOpen && (
+                <div className="glass rise mt-2 grid grid-cols-2 gap-1 rounded-[1.35rem] p-2">
+                  {DAYS.map(day => dayButton(day))}
+                </div>
+              )}
+            </div>
+
+            {/* Dias — desktop */}
+            <nav className="glass hidden flex-col gap-0.5 rounded-[1.75rem] p-2.5 lg:flex">
+              {DAYS.map(day => dayButton(day))}
+            </nav>
+          </aside>
+
+          {/* ─── LISTA DE TAREFAS ─── */}
+          <section className="glass rise flex min-w-0 flex-col overflow-hidden rounded-[1.75rem]" style={{ animationDelay: '100ms' }}>
+
+            {/* Cabeçalho */}
+            <div className="flex items-baseline justify-between gap-3 px-5 pt-5 pb-2 sm:px-6">
+              <h2 className="text-[15px] font-semibold text-ink">
+                {selectedDay === 'Todos' ? 'Todas as tarefas' : selectedDay}
+              </h2>
+              <span className="text-[12px] tabular-nums text-ink-3">
+                {filteredTasks.length} tarefa{filteredTasks.length !== 1 ? 's' : ''}
+              </span>
+            </div>
+
+            {/* Adicionar tarefa */}
+            <div className="flex flex-col gap-2.5 px-4 pt-2 pb-4 sm:flex-row sm:px-5">
+              <input
+                ref={inputRef}
+                value={newTask}
+                onChange={e => setNewTask(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && addTask()}
+                placeholder="Descreva a tarefa..."
+                className="field flex-1 rounded-full"
+              />
+              <button
+                onClick={addTask}
+                disabled={!newTask.trim() || !session}
+                className="btn btn-primary text-[13px]"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                Adicionar
+              </button>
+            </div>
+
+            {/* Lista */}
+            <div className="flex-1">
+              {loading ? (
+                <div className="flex items-center justify-center gap-3 py-16">
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-fill-2 border-t-accent" />
+                  <span className="text-sm text-ink-2">Carregando...</span>
+                </div>
+              ) : filteredTasks.length === 0 ? (
+                <div className="flex flex-col items-center justify-center gap-3.5 px-6 py-20 text-center">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-fill">
+                    <svg className="text-ink-3" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                    </svg>
+                  </div>
+                  <p className="text-sm text-ink-2">
+                    Nenhuma tarefa para <strong className="font-semibold text-ink">{selectedDay}</strong>.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {pendingTasks.length > 0 && (
+                    <TaskSection
+                      label="Pendentes"
+                      tasks={pendingTasks}
+                      completions={completions}
+                      session={session}
+                      showBadge={selectedDay === 'Todos'}
+                      onToggle={toggleCheck}
+                      onDelete={deleteTask}
+                    />
+                  )}
+                  {doneTasks.length > 0 && (
+                    <TaskSection
+                      label="Concluídas"
+                      tasks={doneTasks}
+                      completions={completions}
+                      session={session}
+                      showBadge={selectedDay === 'Todos'}
+                      onToggle={toggleCheck}
+                      onDelete={deleteTask}
+                    />
+                  )}
+                </>
+              )}
+            </div>
+          </section>
         </div>
       </div>
     </main>
@@ -294,18 +348,16 @@ function TaskSection({
 }) {
   return (
     <>
-      <div className="flex items-center gap-3 px-6 py-2.5 bg-gray-50 border-b border-gray-200">
-        <span className="text-[11px] font-mono text-gray-400 tracking-wide">
+      <div className="flex items-center gap-3 bg-fill px-5 py-3 sm:px-6">
+        <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-2">
           {label} — {tasks.length}
         </span>
-        <div className="flex-1 h-px bg-gray-200" />
       </div>
 
-      {tasks.map((task, i) => (
+      {tasks.map(task => (
         <TaskRow
           key={task.id}
           task={task}
-          index={i}
           completions={completions}
           session={session}
           showBadge={showBadge}
@@ -319,7 +371,6 @@ function TaskSection({
 
 function TaskRow({
   task,
-  index,
   completions,
   session,
   showBadge,
@@ -327,7 +378,6 @@ function TaskRow({
   onDelete,
 }: {
   task: any
-  index: number
   completions: any[]
   session: any
   showBadge: boolean
@@ -340,61 +390,54 @@ function TaskRow({
   return (
     <div
       onClick={onToggle}
-      className="group flex items-center px-6 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors min-h-[44px]"
+      className="group flex min-h-14 cursor-pointer items-center gap-3.5 border-b border-separator-soft px-4 py-3 transition-colors last:border-b-0 hover:bg-fill-soft sm:px-6"
     >
-      {/* Row number */}
-      <span className={`w-7 shrink-0 font-mono text-[11px] select-none ${
-        iDidIt ? 'text-gray-200' : 'text-gray-400'
-      }`}>
-        {String(index + 1).padStart(2, '0')}
-      </span>
-
-      {/* Checkbox */}
-      <div className={`w-4 h-4 shrink-0 border rounded-sm flex items-center justify-center mr-3 transition-all ${
+      {/* Checkbox circular (iOS) */}
+      <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-200 ${
         iDidIt
-          ? 'bg-green-500 border-green-500'
-          : 'border-gray-300 group-hover:border-gray-500'
+          ? 'border-transparent bg-success shadow-[0_4px_10px_-3px_rgba(52,199,89,0.6)]'
+          : 'border-ink-4 group-hover:border-success'
       }`}>
         {iDidIt && (
-          <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+          <svg className="text-white" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M5 13l4 4L19 7" />
           </svg>
         )}
       </div>
 
-      {/* Title */}
-      <span className={`flex-1 text-[13px] py-3 leading-snug transition-colors ${
-        iDidIt ? 'text-gray-400 line-through' : 'text-gray-800'
+      {/* Título */}
+      <span className={`min-w-0 flex-1 text-sm leading-snug transition-colors ${
+        iDidIt ? 'text-ink-3 line-through' : 'text-ink'
       }`}>
         {task.title}
       </span>
 
-      {/* Day badge */}
+      {/* Dia da semana */}
       {showBadge && (
-        <span className="shrink-0 ml-3 text-[10px] font-mono text-gray-400 bg-gray-100 border border-gray-200 px-2 py-0.5 rounded-sm">
-          {task.day_of_week === 'Todos' ? 'todo dia' : task.day_of_week}
+        <span className="chip chip-neutral hidden sm:inline-flex">
+          {task.day_of_week === 'Todos' ? 'Todo dia' : task.day_of_week}
         </span>
       )}
 
-      {/* Who completed */}
+      {/* Quem concluiu */}
       {whoCompleted.length > 0 && (
-        <div className="shrink-0 ml-2 flex gap-1">
+        <div className="flex max-w-[45%] flex-wrap justify-end gap-1.5">
           {whoCompleted.map(c => (
-            <span key={c.id} className="text-[11px] font-mono text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded-sm">
-              {c.user_email.split('@')[0]}
+            <span key={c.id} className="chip chip-success max-w-full">
+              <span className="max-w-24 truncate">{c.user_email.split('@')[0]}</span>
             </span>
           ))}
         </div>
       )}
 
-      {/* Delete */}
+      {/* Remover */}
       <button
         onClick={e => { e.stopPropagation(); onDelete() }}
-        className="ml-3 shrink-0 opacity-0 group-hover:opacity-100 focus:opacity-100 p-1 rounded text-gray-300 hover:text-red-500 transition-all"
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-ink-3 opacity-100 transition-all hover:bg-danger/10 hover:text-danger sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"
         title="Remover"
       >
-        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+          <path d="M6 18L18 6M6 6l12 12" />
         </svg>
       </button>
     </div>

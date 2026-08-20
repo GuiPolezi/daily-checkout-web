@@ -391,10 +391,10 @@ export default function Home() {
                                     ...provided.draggableProps.style,
                                     borderLeft: `4px solid ${pCfg.dot}`,
                                   }}
-                                  className={`card group cursor-grab rounded-2xl p-4 pl-3.5 transition-[box-shadow,transform,border-color] duration-200 active:cursor-grabbing ${
+                                  className={`card group cursor-grab rounded-2xl p-4 pl-3.5 transition-[box-shadow,border-color] duration-200 active:cursor-grabbing ${
                                     snapshot.isDragging
                                       ? 'rotate-2 scale-[1.03] shadow-2xl shadow-accent/20'
-                                      : 'hover:-translate-y-0.5 hover:shadow-[0_2px_4px_rgba(16,42,67,0.05),0_14px_28px_-12px_rgba(16,42,67,0.2)]'
+                                      : 'hover:shadow-[0_2px_4px_rgba(16,42,67,0.05),0_14px_28px_-12px_rgba(16,42,67,0.2)]'
                                   }`}
                                 >
                                   <div className="flex items-start justify-between gap-3">

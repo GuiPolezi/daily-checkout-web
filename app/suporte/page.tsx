@@ -17,6 +17,7 @@ export default function SupportPage() {
   const [selectedDay, setSelectedDay] = useState(() => DAY_NAMES[new Date().getDay()])
   const [loading, setLoading] = useState(true)
   const [dayMenuOpen, setDayMenuOpen] = useState(false)
+  const [bulkBusy, setBulkBusy] = useState(false)
   const [clock, setClock] = useState('')
   const [clockDate, setClockDate] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
@@ -76,6 +77,27 @@ export default function SupportPage() {
       }])
     }
     fetchData()
+  }
+
+  const completeDay = async () => {
+    if (!session || bulkBusy) return
+    const targets = teamTasks.filter(
+      t => t.day_of_week === selectedDay &&
+        !completions.some(c => c.team_task_id === t.id && c.user_id === session.user.id)
+    )
+    if (targets.length === 0) return
+
+    setBulkBusy(true)
+    await supabase.from('team_task_completions').insert(
+      targets.map(t => ({
+        team_task_id: t.id,
+        user_id: session.user.id,
+        user_email: session.user.email,
+        completion_date: todayStr,
+      }))
+    )
+    await fetchData()
+    setBulkBusy(false)
   }
 
   const addTask = async () => {
@@ -248,13 +270,37 @@ export default function SupportPage() {
           <section className="glass rise flex min-w-0 flex-col overflow-hidden rounded-[1.75rem]" style={{ animationDelay: '100ms' }}>
 
             {/* Cabeçalho */}
-            <div className="flex items-baseline justify-between gap-3 px-5 pt-5 pb-2 sm:px-6">
+            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-5 pt-5 pb-2 sm:px-6">
               <h2 className="text-[15px] font-semibold text-ink">
                 {selectedDay === 'Todos' ? 'Todas as tarefas' : selectedDay}
               </h2>
-              <span className="text-[12px] tabular-nums text-ink-3">
-                {filteredTasks.length} tarefa{filteredTasks.length !== 1 ? 's' : ''}
-              </span>
+              <div className="flex items-center gap-3">
+                <span className="text-[12px] tabular-nums text-ink-3">
+                  {filteredTasks.length} tarefa{filteredTasks.length !== 1 ? 's' : ''}
+                </span>
+                {filteredTasks.length > 0 && (
+                  <button
+                    onClick={completeDay}
+                    disabled={!session || bulkBusy || pendingTasks.length === 0}
+                    title={
+                      pendingTasks.length === 0
+                        ? 'Tudo já concluído'
+                        : `Concluir ${pendingTasks.length} tarefa${pendingTasks.length !== 1 ? 's' : ''} pendente${pendingTasks.length !== 1 ? 's' : ''}`
+                    }
+                    className="btn btn-sm btn-success-soft"
+                  >
+                    {bulkBusy ? (
+                      <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current/30 border-t-current" />
+                    ) : (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M2 12.5l4 4L15 7" />
+                        <path d="M12 16.5l1.5 1.5L22 9" />
+                      </svg>
+                    )}
+                    Concluir tudo
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Adicionar tarefa */}

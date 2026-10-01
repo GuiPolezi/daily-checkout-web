@@ -13,9 +13,22 @@ interface Task {
   status: 'A Fazer' | 'Em Andamento' | 'Concluída';
   is_completed: boolean;
   user_id: string;
+  position: number;
 }
 
 const COLUMNS: Task['status'][] = ['A Fazer', 'Em Andamento', 'Concluída'];
+
+// Tarefas de uma coluna na ordem definida pelo usuário (menor position = topo)
+const columnTasks = (tasks: Task[], column: Task['status']) =>
+  tasks.filter(t => t.status === column).sort((a, b) => a.position - b.position)
+
+// Posição para encaixar um card entre dois vizinhos (ponto médio), sem precisar renumerar a coluna
+const positionBetween = (before?: Task, after?: Task) => {
+  if (before && after) return (before.position + after.position) / 2
+  if (before) return before.position + 1
+  if (after) return after.position - 1
+  return 0
+}
 
 const PRIORITY_CONFIG = {
   Urgente:  { dot: 'var(--ios-red)',    chip: 'chip-danger',  label: 'Urgente'  },
@@ -58,6 +71,7 @@ export default function Home() {
   async function fetchTasks(userId: string, date: string) {
     const { data } = await supabase
       .from('tasks').select('*').eq('user_id', userId).eq('task_date', date)
+      .order('position', { ascending: true })
       .order('created_at', { ascending: false })
     setTasks(data ? (data as Task[]) : [])
   }
@@ -80,9 +94,11 @@ export default function Home() {
         setNewTask('')
       }
     } else {
+      // Nova tarefa entra no topo da coluna "A Fazer"
+      const position = positionBetween(undefined, columnTasks(tasks, 'A Fazer')[0])
       const { data, error } = await supabase
         .from('tasks')
-        .insert([{ title: newTask, priority, user_id: session.user.id, task_date: selectedDate, status: 'A Fazer' }])
+        .insert([{ title: newTask, priority, user_id: session.user.id, task_date: selectedDate, status: 'A Fazer', position }])
         .select()
       if (!error && data) { setTasks([data[0] as Task, ...tasks]); setNewTask('') }
     }
@@ -93,9 +109,12 @@ export default function Home() {
     if (!destination || (destination.droppableId === source.droppableId && destination.index === source.index)) return
     const taskId = parseInt(draggableId)
     const newStatus = destination.droppableId as Task['status']
-    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t))
-    const { error } = await supabase.from('tasks').update({ status: newStatus }).eq('id', taskId)
-    if (error) { alert('Erro ao atualizar status'); fetchTasks(session.user.id, selectedDate) }
+    // Vizinhos do card no ponto onde foi solto (a coluna de destino sem o próprio card)
+    const siblings = columnTasks(tasks, newStatus).filter(t => t.id !== taskId)
+    const position = positionBetween(siblings[destination.index - 1], siblings[destination.index])
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus, position } : t))
+    const { error } = await supabase.from('tasks').update({ status: newStatus, position }).eq('id', taskId)
+    if (error) { alert('Erro ao mover tarefa'); fetchTasks(session.user.id, selectedDate) }
   }
 
   const deleteTask = async (id: number) => {
@@ -356,7 +375,7 @@ export default function Home() {
         <DragDropContext onDragEnd={onDragEnd}>
           <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-3 lg:gap-5">
             {COLUMNS.map(column => {
-              const colTasks = tasks.filter(t => t.status === column)
+              const colTasks = columnTasks(tasks, column)
               const cfg = COLUMN_CONFIG[column]
               return (
                 <div key={column} className="panel flex flex-col rounded-3xl p-3">

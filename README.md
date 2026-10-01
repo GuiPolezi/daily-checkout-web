@@ -62,6 +62,23 @@ Para que vários usuários possam marcar a mesma tarefa e todos sejam identifica
 
 
 
+4. Ordenação manual dos cards no Kanban
+Permite arrastar os cards dentro da mesma coluna para reordená-los. A ordem fica salva na coluna `position` da tabela `tasks` (menor valor = topo).
+
+    - Procedimento: rodar no SQL Editor do Supabase
+
+```sql
+alter table tasks add column position double precision;
+
+-- Mantém a ordem atual (mais recentes no topo) para as tarefas já existentes
+update tasks set position = -extract(epoch from created_at);
+
+alter table tasks alter column position set default 0;
+alter table tasks alter column position set not null;
+```
+
+
+
 ## 👥 Página de Usuários
 
 Página para **visualizar os usuários do sistema** e demais informações.

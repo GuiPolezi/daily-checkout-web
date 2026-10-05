@@ -380,7 +380,7 @@ export default function SupportPage() {
         </div>
       </div>
 
-      <XpFeedback toasts={game.toasts} levelUp={game.levelUp} onDismissLevelUp={game.dismissLevelUp} />
+      <XpFeedback toasts={game.toasts} achievementToasts={game.achievementToasts} levelUp={game.levelUp} onDismissLevelUp={game.dismissLevelUp} />
     </main>
   )
 }

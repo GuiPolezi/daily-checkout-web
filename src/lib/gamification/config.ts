@@ -47,6 +47,9 @@ export interface GamificationConfig {
     maxLevel: number
   }
   titles: LevelTitle[]
+  achievements: {
+    enabled: boolean
+  }
   backfill: {
     xpPerTask: number
   }
@@ -90,6 +93,9 @@ export const DEFAULT_CONFIG: GamificationConfig = {
     { minLevel: 20, title: 'Mestre Perfumista' },
     { minLevel: 35, title: 'Nariz Lendário' },
   ],
+  achievements: {
+    enabled: true,
+  },
   backfill: {
     xpPerTask: 10,
   },

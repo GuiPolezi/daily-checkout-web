@@ -1,5 +1,6 @@
 // Tipos compartilhados entre as regras (puras), o serviço e as telas.
 
+import type { AchievementProgress } from './achievements'
 import type { GamificationConfig, LevelTitle } from './config'
 
 export const EVENT_TYPES = {
@@ -70,7 +71,8 @@ export interface NewEvent {
   type: EventType
   amount: number
   sourceId: string
-  day: string
+  /** null = lançamento sem dia (conquistas, backfill): entra no total, fica fora da reconciliação diária */
+  day: string | null
   idempotencyKey: string
   metadata: Record<string, unknown>
 }
@@ -108,5 +110,9 @@ export interface SyncResult {
   leveledUp: { from: number; to: number; title: string } | null
   /** XP atual de cada tarefa concluída do dia, com o motivo quando é zero */
   taskXp: Record<string, { amount: number; reason: AwardReason }>
+  /** Conquistas desbloqueadas nesta sincronização */
+  unlocked: { id: string; title: string; description: string; xpReward: number }[]
+  /** Catálogo com o progresso do usuário; null quando as conquistas não estão disponíveis */
+  achievements: AchievementProgress[] | null
   summary: ProgressSummary
 }

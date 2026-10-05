@@ -70,10 +70,19 @@ O personagem muda de cor a cada faixa de título. É só visual; não dá vantag
 - **Você nunca perde XP nem nível** por ficar sem usar o sistema.
 - Feriados ainda não são reconhecidos; os escudos servem para cobrir esses dias.
 
+### Conquistas
+
+Medalhas permanentes por marcos de uso: tarefas concluídas (1, 50, 250, 1.000), rotinas marcadas (25, 200), checkouts enviados (1, 20, 100), dias perfeitos (1, 5, 25), sequência (7, 30, 100 dias) e nível (5, 10, 20).
+
+- Uma conquista desbloqueada **nunca é retirada**, mesmo que você desfaça algo depois.
+- As de tarefas, rotina, checkout e dia perfeito dão um bônus único de XP (de 10 a 200). As de sequência e de nível são só reconhecimento, porque a sequência já paga bônus nos marcos e o nível é consequência do XP.
+- Só conta o que rendeu XP: uma tarefa que ficou "sem XP" não avança as conquistas.
+- A lista completa, com o seu progresso em cada uma, fica em **Meu Perfil**.
+
 ### Onde ver
 
 - **Meu Dia**: card com o personagem, nível, título, barra de XP, sequência, escudos e XP de hoje.
-- **Meu Perfil**: totais, recorde de sequência, tabela dos próximos níveis e o histórico de cada lançamento de XP.
+- **Meu Perfil**: totais, recorde de sequência, conquistas, tabela dos próximos níveis e o histórico de cada lançamento de XP.
 
 ### Limitações conhecidas (para gestores)
 
@@ -123,7 +132,9 @@ A tela Meu Dia sincroniza ao abrir um dia e depois de mover, editar ou apagar ta
 - **`gamification_config`** — uma linha com um JSON de sobrescritas dos parâmetros.
 - **`xp_day_totals`** — view com o XP por dia (base do total e da sequência).
 - **`tasks.completed_at`** — preenchida por trigger no banco quando a tarefa entra em "Concluída". O cliente não consegue forjar essa data, nem `created_at`.
-- `achievements`, `user_achievements`, `avatar_items`, `user_avatar` — criadas vazias para as próximas fases.
+- **`user_achievements`** — conquistas desbloqueadas por pessoa. O catálogo fica no código (`src/lib/gamification/achievements.ts`); a tabela `achievements` é espelhada pelo servidor conforme as conquistas são desbloqueadas.
+- **`xp_user_stats`** — view com as contagens usadas para desbloquear conquistas (migration 003).
+- `avatar_items`, `user_avatar` — criadas vazias para a personalização do personagem.
 
 Segurança: as tabelas de XP só têm política de leitura. Quem escreve é o servidor, com a `SUPABASE_SERVICE_ROLE_KEY`. Cada pessoa lê apenas o próprio histórico de XP.
 
@@ -134,7 +145,8 @@ Como não há duplicidade: a chave de cada lançamento é `usuário:dia:origem:s
 1. No **SQL Editor** do Supabase, rode `supabase/migrations/001_gamification.sql`.
 2. Rode `supabase/migrations/002_fechar_leitura_sem_login.sql`. É uma correção de segurança independente da gamificação (a gamificação funciona sem ela): impede que relatórios, perfis e estatísticas sejam lidos sem login. Nenhuma tela do sistema lê essas tabelas sem sessão, e o arquivo traz o comando para desfazer.
 3. Na **Vercel** (Settings → Environment Variables) e no `.env.local`, adicione `SUPABASE_SERVICE_ROLE_KEY` com a chave *service_role* do projeto (Supabase → Settings → API). Essa chave nunca deve receber o prefixo `NEXT_PUBLIC_`.
-4. Faça o deploy.
+4. Rode `supabase/migrations/003_conquistas.sql` para ligar as conquistas. Sem ela, XP, níveis e sequência funcionam normalmente e a seção de conquistas simplesmente não aparece.
+5. Faça o deploy.
 
 Enquanto os passos 1 e 3 não forem feitos, a rota responde 503 e as telas simplesmente não mostram o card — o restante do sistema funciona como antes.
 
@@ -150,7 +162,7 @@ set params = '{"task": {"minSecondsToComplete": 0}, "bonus": {"dailyCheckout": 2
 where id = 1;
 ```
 
-Parâmetros disponíveis: `timeZone`, `workdays`, `task` (`baseXp`, `routineBaseXp`, `priorityMultipliers`, `dailyCap`, `routineDailyCap`, `minSecondsToComplete`, `dedupeTitles`), `streak` (`multiplierPerDay`, `multiplierMax`, `shieldEvery`, `maxShields`, `milestones`, `milestoneBonus`), `bonus` (`dailyCheckout`, `perfectDay`), `level` (`coefficient`, `exponent`, `maxLevel`), `titles` e `backfill.xpPerTask`.
+Parâmetros disponíveis: `timeZone`, `workdays`, `task` (`baseXp`, `routineBaseXp`, `priorityMultipliers`, `dailyCap`, `routineDailyCap`, `minSecondsToComplete`, `dedupeTitles`), `streak` (`multiplierPerDay`, `multiplierMax`, `shieldEvery`, `maxShields`, `milestones`, `milestoneBonus`), `bonus` (`dailyCheckout`, `perfectDay`), `level` (`coefficient`, `exponent`, `maxLevel`), `titles`, `achievements.enabled` e `backfill.xpPerTask`.
 
 Atenção: mudar a curva (`level`) muda o nível de todos imediatamente, porque o nível é derivado do XP. Mudar valores de XP vale para o dia de hoje em diante; dias já lançados só são recalculados se forem sincronizados de novo.
 
@@ -190,5 +202,5 @@ npm run build
 
 ### Próximas fases
 
-- **Fase 2**: conquistas, personalização do personagem por nível, missões.
+- **Fase 2 (em andamento)**: conquistas já entregues; faltam personalização do personagem por nível e missões.
 - **Fase 3**: metas cooperativas da equipe e painel do gestor (exige papéis de usuário).

@@ -9,9 +9,16 @@ export interface XpToast {
   amount: number
 }
 
+export interface AchievementToast {
+  key: number
+  title: string
+  xpReward: number
+}
+
 export type TaskXpMap = SyncResult['taskXp']
 
 const TOAST_DURATION_MS = 2600
+const ACHIEVEMENT_TOAST_DURATION_MS = 5000
 
 /**
  * Liga uma tela à gamificação. `sync(data)` pede ao servidor para recalcular o XP do dia;
@@ -25,6 +32,8 @@ export function useGamification() {
   const [notConfigured, setNotConfigured] = useState(false)
   const [taskXp, setTaskXp] = useState<{ day: string; byTask: TaskXpMap } | null>(null)
   const [toasts, setToasts] = useState<XpToast[]>([])
+  const [achievements, setAchievements] = useState<SyncResult['achievements']>(null)
+  const [achievementToasts, setAchievementToasts] = useState<AchievementToast[]>([])
   const [levelUp, setLevelUp] = useState<SyncResult['leveledUp']>(null)
   // Contadores que avisam o personagem para comemorar
   const [gainCount, setGainCount] = useState(0)
@@ -70,6 +79,18 @@ export function useGamification() {
       setAvailable(true)
       setSummary(result.summary)
       setTaskXp({ day: result.day, byTask: result.taskXp })
+      setAchievements(result.achievements ?? null)
+
+      // Conquista nova é avisada mesmo em sincronização silenciosa: ela só acontece uma vez
+      const unlocked = result.unlocked ?? []
+      if (unlocked.length > 0) {
+        const fresh = unlocked.map(item => ({ key: ++toastId.current, title: item.title, xpReward: item.xpReward }))
+        const keys = new Set(fresh.map(item => item.key))
+        setAchievementToasts(current => [...current, ...fresh])
+        setTimeout(() => {
+          if (mounted.current) setAchievementToasts(current => current.filter(item => !keys.has(item.key)))
+        }, ACHIEVEMENT_TOAST_DURATION_MS)
+      }
       if (silent) return
 
       if (result.delta !== 0) {
@@ -98,5 +119,5 @@ export function useGamification() {
 
   const dismissLevelUp = useCallback(() => setLevelUp(null), [])
 
-  return { summary, available, notConfigured, taskXp, toasts, levelUp, dismissLevelUp, gainCount, levelUpCount, sync }
+  return { summary, available, notConfigured, taskXp, achievements, achievementToasts, toasts, levelUp, dismissLevelUp, gainCount, levelUpCount, sync }
 }

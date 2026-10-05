@@ -32,6 +32,9 @@ export function getServiceClient(): SupabaseClient {
 // PostgREST devolve estes códigos quando a tabela/view ainda não existe (migration não aplicada)
 const MISSING_RELATION_CODES = new Set(['42P01', 'PGRST205', 'PGRST204', '42703'])
 
+const isMissingRelation = (error: { code?: string } | null) =>
+  Boolean(error?.code && MISSING_RELATION_CODES.has(error.code))
+
 function unwrap<T>(result: { data: T | null; error: { code?: string; message: string } | null }): T {
   if (result.error) {
     if (result.error.code && MISSING_RELATION_CODES.has(result.error.code)) {
@@ -105,6 +108,42 @@ export function createSupabaseRepo(client: SupabaseClient = getServiceClient()):
         .from('xp_events')
         .upsert(rows, { onConflict: 'idempotency_key', ignoreDuplicates: true })
       unwrap({ data: null, error })
+    },
+
+    async loadAchievementState(userId) {
+      const [stats, unlocked] = await Promise.all([
+        client.from('xp_user_stats').select('tasks_completed,routines_completed,checkouts,perfect_days').eq('user_id', userId).limit(1),
+        client.from('user_achievements').select('achievement_id,unlocked_at').eq('user_id', userId),
+      ])
+      // Sem a migration das conquistas, o resto da gamificação continua funcionando
+      if (isMissingRelation(stats.error) || isMissingRelation(unlocked.error)) return null
+
+      const row = unwrap(stats)[0]
+      return {
+        counts: {
+          tasksCompleted: row?.tasks_completed ?? 0,
+          routinesCompleted: row?.routines_completed ?? 0,
+          checkouts: row?.checkouts ?? 0,
+          perfectDays: row?.perfect_days ?? 0,
+        },
+        unlocked: unwrap(unlocked).map(item => ({ id: item.achievement_id, unlockedAt: item.unlocked_at })),
+      }
+    },
+
+    async unlockAchievements(userId, achievements) {
+      if (achievements.length === 0) return
+      // O catálogo vive no código; a tabela é espelhada sob demanda por causa da chave estrangeira
+      const catalog = await client.from('achievements').upsert(
+        achievements.map(item => ({ id: item.id, title: item.title, description: item.description, xp_reward: item.xpReward }))
+      )
+      unwrap({ data: null, error: catalog.error })
+      const unlocked = await client
+        .from('user_achievements')
+        .upsert(
+          achievements.map(item => ({ user_id: userId, achievement_id: item.id })),
+          { onConflict: 'user_id,achievement_id', ignoreDuplicates: true }
+        )
+      unwrap({ data: null, error: unlocked.error })
     },
 
     async saveProgress(userId, progress) {

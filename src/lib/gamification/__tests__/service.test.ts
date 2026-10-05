@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it } from 'vitest'
+import { ACHIEVEMENTS, findNewAchievements, type AchievementDefinition, type AchievementStats } from '../achievements'
 import { DEFAULT_CONFIG } from '../config'
 import { addDays, isWorkday } from '../day'
 import { reconcileDay } from '../reconcile'
-import { syncDay, type GamificationRepo, type ProgressRow } from '../service'
+import { syncDay, type AchievementState, type GamificationRepo, type ProgressRow } from '../service'
 import type { DayTask, DayTotal, NewEvent, RoutineTask } from '../types'
 
 const USER = 'user-1'
@@ -25,6 +26,10 @@ class FakeDb implements GamificationRepo {
   events: NewEvent[] = []
   progress: ProgressRow | null = null
   configOverride: unknown = null
+  // Desligado por padrão para os testes de XP não dependerem das conquistas
+  achievementsAvailable = false
+  unlocked: { id: string; unlockedAt: string }[] = []
+  failNextUnlock = false
   private nextTaskId = 1
 
   addTask(day: string, overrides: Partial<StoredTask> = {}): StoredTask {
@@ -85,6 +90,37 @@ class FakeDb implements GamificationRepo {
 
   async saveProgress(_userId: string, progress: ProgressRow) {
     this.progress = progress
+  }
+
+  // Mesma conta da view xp_user_stats: origens com saldo positivo, por tipo
+  async loadAchievementState(userId: string): Promise<AchievementState | null> {
+    if (!this.achievementsAvailable) return null
+    const net = new Map<string, number>()
+    for (const event of this.events.filter(e => e.userId === userId && e.day !== null)) {
+      const key = `${event.day}|${event.sourceId}`
+      net.set(key, (net.get(key) ?? 0) + event.amount)
+    }
+    const count = (kind: string) =>
+      [...net.entries()].filter(([key, amount]) => amount > 0 && key.split('|')[1].split(':')[0] === kind).length
+    return {
+      counts: {
+        tasksCompleted: count('task'),
+        routinesCompleted: count('routine'),
+        checkouts: count('checkout'),
+        perfectDays: count('perfect_day'),
+      },
+      unlocked: [...this.unlocked],
+    }
+  }
+
+  async unlockAchievements(_userId: string, achievements: AchievementDefinition[]) {
+    if (this.failNextUnlock) {
+      this.failNextUnlock = false
+      throw new Error('falha simulada')
+    }
+    for (const item of achievements) {
+      if (!this.unlocked.some(u => u.id === item.id)) this.unlocked.push({ id: item.id, unlockedAt: '2026-03-02T15:00:00Z' })
+    }
   }
 
   ledgerTotal() {
@@ -282,6 +318,118 @@ describe('syncDay — progresso e sequência', () => {
     expect(last.summary.xpToday).toBe(10)
     expect(last.summary.today).toBe(day)
     expect(last.summary.totalXp).toBe(20)
+  })
+})
+
+describe('syncDay — conquistas', () => {
+  beforeEach(() => {
+    db.achievementsAvailable = true
+  })
+
+  it('a primeira tarefa desbloqueia a conquista e paga o XP uma única vez', async () => {
+    const task = db.addTask(MONDAY)
+    db.move(task, 'Concluída', `${MONDAY}T14:00:00Z`)
+
+    const first = await sync(MONDAY)
+    expect(first.unlocked.map(a => a.id)).toEqual(['tasks_1'])
+    expect(first.delta).toBe(10 + 10)
+    expect(first.summary.totalXp).toBe(20)
+    expect(first.achievements?.find(a => a.id === 'tasks_1')).toMatchObject({ current: 1, target: 1 })
+    expect(first.achievements?.find(a => a.id === 'tasks_1')?.unlockedAt).not.toBeNull()
+
+    const second = await sync(MONDAY)
+    expect(second.unlocked).toEqual([])
+    expect(second.delta).toBe(0)
+    expect(db.events.filter(e => e.type === 'ACHIEVEMENT')).toHaveLength(1)
+  })
+
+  it('conquista desbloqueada é permanente, mesmo desfazendo a tarefa', async () => {
+    const task = db.addTask(MONDAY)
+    db.move(task, 'Concluída', `${MONDAY}T14:00:00Z`)
+    await sync(MONDAY)
+
+    db.move(task, 'A Fazer', `${MONDAY}T14:10:00Z`)
+    const reverted = await sync(MONDAY)
+    expect(reverted.summary.totalXp).toBe(10) // só o XP da conquista permanece
+    expect(db.unlocked.map(u => u.id)).toEqual(['tasks_1'])
+
+    // Refazer não paga a conquista de novo
+    db.move(task, 'Concluída', `${MONDAY}T14:20:00Z`)
+    const again = await sync(MONDAY)
+    expect(again.unlocked).toEqual([])
+    expect(again.summary.totalXp).toBe(20)
+  })
+
+  it('o XP da conquista não é tratado como origem do dia pela reconciliação', async () => {
+    const task = db.addTask(MONDAY)
+    db.move(task, 'Concluída', `${MONDAY}T14:00:00Z`)
+    await sync(MONDAY)
+    const reward = db.events.find(e => e.type === 'ACHIEVEMENT')
+    expect(reward).toMatchObject({ day: null, amount: 10, sourceId: 'achievement:tasks_1' })
+
+    const later = await sync(MONDAY)
+    expect(later.events).toEqual([])
+    expect(later.summary.xpToday).toBe(10)
+  })
+
+  it('se o registro do desbloqueio falhar, a nova tentativa não paga em dobro', async () => {
+    const task = db.addTask(MONDAY)
+    db.move(task, 'Concluída', `${MONDAY}T14:00:00Z`)
+    db.failNextUnlock = true
+    await expect(sync(MONDAY)).rejects.toThrow('falha simulada')
+
+    const retry = await sync(MONDAY)
+    expect(retry.unlocked.map(a => a.id)).toEqual(['tasks_1'])
+    expect(db.events.filter(e => e.type === 'ACHIEVEMENT')).toHaveLength(1)
+    expect(retry.summary.totalXp).toBe(20)
+  })
+
+  it('checkout e dia perfeito desbloqueiam as conquistas correspondentes', async () => {
+    db.routineTasks = [{ id: 1, dayOfWeek: 'Todos' }]
+    db.completions = [{ teamTaskId: 1, day: MONDAY }]
+    db.checkouts.push(MONDAY)
+    const result = await sync(MONDAY)
+    expect(result.unlocked.map(a => a.id).sort()).toEqual(['checkout_1', 'perfect_1'])
+    expect(result.summary.totalXp).toBe(8 + 30 + 20 + 10 + 10)
+  })
+
+  it('sem a estrutura de conquistas no banco, o XP funciona normalmente', async () => {
+    db.achievementsAvailable = false
+    const task = db.addTask(MONDAY)
+    db.move(task, 'Concluída', `${MONDAY}T14:00:00Z`)
+    const result = await sync(MONDAY)
+    expect(result.delta).toBe(10)
+    expect(result.achievements).toBeNull()
+    expect(result.unlocked).toEqual([])
+  })
+
+  it('pode ser desligado pela configuração', async () => {
+    db.configOverride = { achievements: { enabled: false } }
+    const task = db.addTask(MONDAY)
+    db.move(task, 'Concluída', `${MONDAY}T14:00:00Z`)
+    const result = await sync(MONDAY)
+    expect(result.delta).toBe(10)
+    expect(result.achievements).toBeNull()
+  })
+})
+
+describe('findNewAchievements', () => {
+  const stats = (overrides: Partial<AchievementStats> = {}): AchievementStats => ({
+    tasksCompleted: 0, routinesCompleted: 0, checkouts: 0, perfectDays: 0, bestStreak: 0, level: 1, ...overrides,
+  })
+
+  it('nada é desbloqueado do zero', () => {
+    expect(findNewAchievements(stats(), [])).toEqual([])
+  })
+
+  it('desbloqueia tudo o que já atingiu o alvo, menos o que já consta', () => {
+    const fresh = findNewAchievements(stats({ tasksCompleted: 60, bestStreak: 7, level: 5 }), ['tasks_1'])
+    expect(fresh.map(a => a.id)).toEqual(['tasks_50', 'streak_7', 'level_5'])
+  })
+
+  it('o catálogo tem ids únicos e alvos positivos', () => {
+    expect(new Set(ACHIEVEMENTS.map(a => a.id)).size).toBe(ACHIEVEMENTS.length)
+    expect(ACHIEVEMENTS.every(a => a.target > 0 && a.xpReward >= 0)).toBe(true)
   })
 })
 

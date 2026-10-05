@@ -6,6 +6,7 @@ import type { Session } from '@supabase/supabase-js'
 import { supabase } from '@/src/lib/supabaseClient'
 import TopNav from '@/app/components/TopNav'
 import ProfileCard from '@/app/components/gamification/ProfileCard'
+import XpFeedback from '@/app/components/gamification/XpFeedback'
 import { useGamification } from '@/app/components/gamification/useGamification'
 import { todayLocal } from '@/src/lib/gamification/day'
 import { totalXpForLevel, xpForLevel } from '@/src/lib/gamification/levels'
@@ -32,7 +33,7 @@ const EVENT_LABEL: Record<string, string> = {
   STREAK_BONUS: 'Marco de sequência',
   BONUS_REVERTED: 'Bônus estornado',
   BACKFILL: 'Tarefas concluídas antes da gamificação',
-  ACHIEVEMENT: 'Conquista',
+  ACHIEVEMENT: 'Conquista desbloqueada',
 }
 
 function eventDetail(event: XpEventRow): string | null {
@@ -136,6 +137,49 @@ export default function ProfilePage() {
                   ))}
                 </section>
 
+                {/* ─── CONQUISTAS ─── */}
+                {game.achievements && (
+                  <section className="glass rise rounded-[1.75rem] p-5 sm:p-6" style={{ animationDelay: '120ms' }}>
+                    <div className="flex items-center justify-between gap-3">
+                      <h2 className="text-[15px] font-semibold text-ink">Conquistas</h2>
+                      <span className="chip chip-accent tabular-nums">
+                        {game.achievements.filter(item => item.unlockedAt).length} de {game.achievements.length}
+                      </span>
+                    </div>
+
+                    <ul className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
+                      {game.achievements.map(item => {
+                        const unlocked = Boolean(item.unlockedAt)
+                        return (
+                          <li
+                            key={item.id}
+                            className={`flex items-start gap-3 rounded-2xl px-4 py-3 ${unlocked ? 'bg-success/10' : 'bg-fill-soft'}`}
+                          >
+                            <span className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
+                              unlocked ? 'bg-success text-white' : 'bg-fill text-ink-3'
+                            }`}>
+                              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                <circle cx="12" cy="9" r="6" />
+                                <path d="M8.5 14.2L7 22l5-3 5 3-1.5-7.8" />
+                              </svg>
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <p className={`truncate text-sm font-semibold ${unlocked ? 'text-ink' : 'text-ink-2'}`}>{item.title}</p>
+                              <p className="mt-0.5 text-xs text-ink-3">{item.description}</p>
+                              <p className="mt-1.5 text-[11px] font-medium tabular-nums text-ink-2">
+                                {unlocked
+                                  ? `Desbloqueada em ${new Date(item.unlockedAt as string).toLocaleDateString('pt-BR')}`
+                                  : `${item.current} de ${item.target}`}
+                                {item.xpReward > 0 ? ` · ${unlocked ? '+' : 'vale '}${item.xpReward} XP` : ''}
+                              </p>
+                            </div>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  </section>
+                )}
+
                 <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:items-start">
                   {/* ─── EVOLUÇÃO DE NÍVEL ─── */}
                   <section className="glass rise rounded-[1.75rem] p-5 sm:p-6" style={{ animationDelay: '140ms' }}>
@@ -231,6 +275,13 @@ export default function ProfilePage() {
           </div>
         )}
       </div>
+
+      <XpFeedback
+        toasts={game.toasts}
+        achievementToasts={game.achievementToasts}
+        levelUp={game.levelUp}
+        onDismissLevelUp={game.dismissLevelUp}
+      />
     </main>
   )
 }

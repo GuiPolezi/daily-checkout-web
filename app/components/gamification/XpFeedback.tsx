@@ -2,10 +2,11 @@
 
 import { useEffect, useRef } from 'react'
 import type { SyncResult } from '@/src/lib/gamification/types'
-import type { XpToast } from './useGamification'
+import type { AchievementToast, XpToast } from './useGamification'
 
 interface Props {
   toasts: XpToast[]
+  achievementToasts?: AchievementToast[]
   levelUp: SyncResult['leveledUp']
   onDismissLevelUp: () => void
 }
@@ -19,7 +20,7 @@ const CONFETTI_PIECES = Array.from({ length: 16 }, (_, index) => ({
 
 // Avisos de "+XP" e a celebração de subida de nível. Usa position: fixed,
 // então deve ficar fora de qualquer elemento .glass (backdrop-filter desloca filhos fixos).
-export default function XpFeedback({ toasts, levelUp, onDismissLevelUp }: Props) {
+export default function XpFeedback({ toasts, achievementToasts = [], levelUp, onDismissLevelUp }: Props) {
   const buttonRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
@@ -39,6 +40,25 @@ export default function XpFeedback({ toasts, levelUp, onDismissLevelUp }: Props)
         role="status"
         aria-live="polite"
       >
+        {achievementToasts.map(toast => (
+          <div
+            key={toast.key}
+            className="card rise mx-4 flex max-w-sm items-center gap-3 rounded-3xl px-4 py-3 shadow-[0_12px_28px_-12px_rgba(16,42,67,0.5)]"
+          >
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-warn/15 text-warn">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <circle cx="12" cy="9" r="6" />
+                <path d="M8.5 14.2L7 22l5-3 5 3-1.5-7.8" />
+              </svg>
+            </span>
+            <span className="min-w-0">
+              <span className="block text-[11px] font-semibold uppercase tracking-wider text-ink-3">Conquista desbloqueada</span>
+              <span className="block truncate text-sm font-semibold text-ink">
+                {toast.title}{toast.xpReward > 0 ? ` · +${toast.xpReward} XP` : ''}
+              </span>
+            </span>
+          </div>
+        ))}
         {toasts.map(toast => (
           <div
             key={toast.id}

@@ -1,157 +1,257 @@
-#### Metadados | Projeto 
-{ Passo 1: O Backend (Supabase) }
+<div align="center">
 
-Vamos usar o Supabase para o Banco de Dados e Autenticação.
+# Daily Checkout
 
-- Crie uma conta em supabase.com e crie um novo projeto
-- Vá até a aba SQL Editor
-- Crie as tabelas
+**Planeje o dia, conclua as tarefas e veja o seu progresso virar níveis, medalhas e sequência.**
 
-Vá em Settings > API e copie:
-- Project URL
-- anon public key.
+![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white)
+![React](https://img.shields.io/badge/React-19-149ECA?logo=react&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss&logoColor=white)
+![Supabase](https://img.shields.io/badge/Supabase-Postgres-3ECF8E?logo=supabase&logoColor=white)
+![Three.js](https://img.shields.io/badge/Three.js-3D-000000?logo=threedotjs&logoColor=white)
 
-{ Passo 2: O Frontend (Next.js) }
-- Clone o repositorio
+[Ver em produção](https://daily-checkout-team.vercel.app/) · [Guia da gamificação](#-guia-da-gamificação) · [Instalação](#-instalação)
 
-"git clone ...."
+</div>
 
-- Entre na pasta e instale a biblioteca do Supabase:
-npm install @supabase/supabase-js
+---
 
-- Crie um arquivo na raiz do projeto chamado .env.local e coloque suas chaves:
+## Sobre
 
-{ Passo 3: O Código (A Lógica) }
+O Daily Checkout é um quadro pessoal de tarefas para o dia a dia de trabalho. Você monta o seu dia num kanban, marca as tarefas de rotina e, no fim, envia um **checkout** com o resumo do que foi feito.
 
-Estrutura simplificada para funcionar em um único arquivo principal para facilitar o entendimento
+Por cima disso existe uma camada de **gamificação**: cada tarefa concluída rende XP, o XP vira nível, e a constância vira sequência. A ideia é simples — reforçar o hábito de planejar e concluir o dia, sem punição e sem comparação com ninguém.
 
-- arquivo src/lib/supabaseClient.ts
-- Arquivo Page.tsx
+## Funcionalidades
 
+| | |
+|---|---|
+| **Meu Dia** | Kanban com três colunas (A fazer, Em andamento, Concluída), arrastar e soltar, prioridades e navegação por data |
+| **Rotina** | Tarefas recorrentes por dia da semana ou para todos os dias, com progresso do dia |
+| **Checkout** | Resumo do dia enviado com um clique |
+| **Histórico** | Todos os checkouts enviados, com filtro por pessoa e por data |
+| **Equipe** | Membros cadastrados, com foto e contagem de tarefas |
+| **Meu Perfil** | Nível, sequência, missões, conquistas, personagem e o histórico de cada ponto de XP |
+| **Tema** | Claro e escuro, com visual inspirado em iOS e Frutiger Aero |
 
+---
 
-### Sistema Atributos
-1. Integração do sistema: Permite enviar e-mail ao clicar em submit
+## 🎮 Guia da gamificação
 
-Observação: Adicionar todas as Variaveis de Ambiente do .env no Vercel também.
+### Como ganhar XP
 
+| O que você faz | XP |
+|---|:---:|
+| Concluir uma tarefa do dia (arrastar para **Concluída**) | **10** |
+| Marcar uma tarefa da **Rotina** prevista para hoje | **8** |
+| Enviar o **checkout** (num dia que já rendeu XP) | **+20** |
+| **Dia perfeito** — marcar todas as rotinas previstas para hoje | **+30** |
+| Chegar a 7, 30 ou 100 dias de sequência | **+50** |
 
-    - Instalação do nodemailer (npm install nodemailer)
+Quem está em sequência ganha um pouco mais por tarefa: **+2% por dia de sequência**, até o máximo de +30%.
 
-    - Criação da Route.ts (api\send-email)
-    - Implementação na função submitCheckout
+> **Mudou de ideia?** Se você desfaz uma conclusão — volta o card de coluna, apaga a tarefa ou desmarca a rotina — o XP correspondente é devolvido. Concluir de novo devolve o XP, nunca em dobro.
 
-    - Adição de informações do e-mail (SMTP) no .env.local
-    - E-mail recebedor também no .env
+<details>
+<summary><b>Quando uma tarefa não rende XP</b></summary>
 
-|
+<br>
 
-2. Adicionando Rotina da Equipe.
-Tarefas compartilhadas e Recorrentes.
+O próprio card avisa o motivo.
 
-    - Procedimento: Criar a tabela team_tasks no Supabase
+- **Título repetido no dia** — duas tarefas com o mesmo título no mesmo dia rendem XP uma vez só.
+- **Concluída fora do dia** — tarefa de ontem concluída hoje não rende XP.
+- **Teto diário** — tarefas rendem no máximo **100 XP por dia**; a rotina tem um teto próprio de **80 XP**. Os bônus ficam fora do teto.
+- **Rotina de outro dia** — só rende XP a rotina prevista para o dia da semana de hoje (ou para "Todos").
 
-|
+Rotina, checkout e dia perfeito só rendem XP **no próprio dia**.
 
-3. accountability (responsabilidade) na equipe
-Para que vários usuários possam marcar a mesma tarefa e todos sejam identificados
+</details>
 
-    - Procedimento: Criar a tabela de Conclusões (SQL)
+### Como subir de nível
 
-    - Criado: app/suporte/page.tsx -> pagina do suporte
+Todo XP soma no seu total, e o total define o nível. O começo é rápido; os níveis altos pedem constância.
 
+| Nível | XP para o próximo | XP acumulado para chegar |
+|:---:|:---:|:---:|
+| 1 | 60 | 0 |
+| 2 | 170 | 60 |
+| 3 | 312 | 230 |
+| 4 | 480 | 542 |
+| 5 | 671 | 1.022 |
+| 10 | 1.897 | 6.664 |
+| 20 | 5.367 | 40.282 |
 
+No ritmo de umas 80 XP por dia útil: **nível 5** em 2 a 3 semanas, **nível 10** em cerca de 4 meses, **nível 20** em cerca de 2 anos.
 
-4. Ordenação manual dos cards no Kanban
-Permite arrastar os cards dentro da mesma coluna para reordená-los. A ordem fica salva na coluna `position` da tabela `tasks` (menor valor = topo).
+A cada faixa de nível você ganha um título novo e o personagem muda de cor:
 
-    - Procedimento: rodar no SQL Editor do Supabase
+| Níveis | Título |
+|:---:|---|
+| 1 – 4 | Aprendiz de Essências |
+| 5 – 9 | Perfumista Júnior |
+| 10 – 19 | Perfumista |
+| 20 – 34 | Mestre Perfumista |
+| 35+ | Nariz Lendário |
 
-```sql
-alter table tasks add column position double precision;
+**Você nunca perde XP nem nível** por ficar sem usar o sistema.
 
--- Mantém a ordem atual (mais recentes no topo) para as tarefas já existentes
-update tasks set position = -extract(epoch from created_at);
+### Sequência e escudos
 
-alter table tasks alter column position set default 0;
-alter table tasks alter column position set not null;
+A **sequência** conta quantos **dias úteis seguidos** (segunda a sexta) você ganhou XP com pelo menos uma tarefa ou rotina.
+
+- Sábado e domingo são neutros: não contam e não quebram a sequência.
+- O dia de hoje fica "em aberto" até acabar — ele só quebra a sequência se terminar sem atividade.
+
+**Para que serve o escudo?** Ele protege a sua sequência.
+
+- A cada **7 dias de sequência** você ganha **1 escudo**. Dá para guardar até **2**.
+- Se você perder um dia útil, um escudo é gasto no lugar e a sequência continua.
+- Sem escudo, perder um dia útil zera o contador — mas o seu **recorde** fica salvo.
+
+Feriados ainda não são reconhecidos; é para esses dias que os escudos existem.
+
+### Missões
+
+Objetivos curtos que dão um XP extra. Ficam num painel na página **Meu Dia** e em **Meu Perfil**.
+
+| Missão | Quando | O que pede | XP |
+|---|:---:|---|:---:|
+| Três Notas | Diária | Concluir 3 tarefas que rendam XP | 15 |
+| Ritual Duplo | Diária | Marcar 2 tarefas de rotina | 10 |
+| Dia Redondo | Diária | Uma tarefa, uma rotina e o checkout enviado | 15 |
+| Constância | Semanal | 3 dias úteis ativos na semana | 20 |
+| Semana Cheia | Semanal | 5 dias úteis ativos na semana | 40 |
+| Colheita da Semana | Semanal | Somar 300 XP na semana | 30 |
+
+A semana vai de segunda a domingo. As recompensas atuais são provisórias e ainda serão calibradas.
+
+### Conquistas
+
+Medalhas **permanentes** por marcos de uso — uma vez desbloqueada, a conquista nunca é retirada.
+
+<details>
+<summary><b>Ver as 18 conquistas</b></summary>
+
+<br>
+
+| Conquista | Como desbloquear | Bônus |
+|---|---|:---:|
+| Primeira Nota | Concluir a primeira tarefa | +10 XP |
+| Mãos de Alquimista | Concluir 50 tarefas | +50 XP |
+| Coleção Assinada | Concluir 250 tarefas | +100 XP |
+| Obra-Prima | Concluir 1.000 tarefas | +200 XP |
+| Ritual em Dia | Marcar 25 tarefas de rotina | +30 XP |
+| Guardião da Rotina | Marcar 200 tarefas de rotina | +100 XP |
+| Primeiro Fechamento | Enviar o primeiro checkout | +10 XP |
+| Diário de Bordo | Enviar o checkout em 20 dias | +50 XP |
+| Memória Olfativa | Enviar o checkout em 100 dias | +150 XP |
+| Dia Perfeito | Completar toda a rotina de um dia | +10 XP |
+| Semana Perfeita | Completar toda a rotina em 5 dias | +40 XP |
+| Harmonia Completa | Completar toda a rotina em 25 dias | +100 XP |
+| Fixação | 7 dias úteis de sequência | — |
+| Longa Duração | 30 dias úteis de sequência | — |
+| Essência Eterna | 100 dias úteis de sequência | — |
+| Jaleco Novo | Chegar ao nível 5 | — |
+| Bancada Própria | Chegar ao nível 10 | — |
+| Casa de Perfumes | Chegar ao nível 20 | — |
+
+As de sequência e de nível são só reconhecimento: a sequência já paga bônus nos marcos e o nível é consequência do XP.
+
+</details>
+
+### Seu personagem
+
+Na página **Meu Dia** mora o seu personagem: um robô 3D que acompanha o mouse, comemora quando você ganha XP e acena quando você sobe de nível. Em aparelhos mais simples, ou com "reduzir movimento" ligado, ele aparece em versão 2D.
+
+Em **Meu Perfil** você personaliza três coisas. Os itens são liberados por nível e são **só visuais** — nenhum dá vantagem.
+
+| O que muda | Opções (nível que libera) |
+|---|---|
+| **Cor do personagem** | Automática · Céu (1) · Menta (2) · Coral (3) · Violeta (5) · Âmbar (8) · Ônix (12) |
+| **Cor da aura** | Automática · Azul (1) · Verde (2) · Rosa (4) · Lilás (6) · Dourada (10) |
+| **Comemoração** | Joinha (1) · Sim! (2) · Pulo (4) · Soco no ar (6) · Dança (8) |
+
+"Automática" segue a cor da sua faixa de título.
+
+### Onde acompanhar
+
+- **Meu Dia** — card com personagem, nível, título, barra de XP, sequência, escudos, XP de hoje e o painel de missões.
+- **Meu Perfil** — totais, recorde de sequência, personalização do personagem, missões, conquistas, os próximos níveis e o histórico de cada ponto de XP.
+
+---
+
+## 🚀 Instalação
+
+### Pré-requisitos
+
+- [Node.js](https://nodejs.org) 20 ou superior
+- Uma conta no [Supabase](https://supabase.com) (o plano gratuito basta)
+
+### 1. Clone e instale
+
+```bash
+git clone https://github.com/GuiPolezi/daily-checkout-web.git
+cd daily-checkout-web
+npm install
 ```
 
+### 2. Prepare o Supabase
 
+1. Crie um projeto em [supabase.com](https://supabase.com).
+2. Crie as tabelas, o bucket de fotos e rode as migrations seguindo o guia [**Banco de dados**](./docs/BANCO-DE-DADOS.md).
+3. Em **Authentication → Users**, cadastre os usuários que vão acessar o sistema (login por e-mail e senha).
 
-## 👥 Página de Usuários
+### 3. Configure as variáveis de ambiente
 
-Página para **visualizar os usuários do sistema** e demais informações.
+Copie o arquivo de exemplo e preencha com as chaves do seu projeto (**Supabase → Settings → API**):
 
-
-
-### 🧩 Passo 1: Preparação do Banco de Dados e Storage (SQL)
-
-O **Supabase** gerencia usuários na tabela `auth.users`, que é protegida.  
-Por isso, criaremos uma tabela pública chamada **`profiles`** para armazenar as fotos, e um **Storage Bucket** para os arquivos.
-
-### 📦 Criar tabela de perfis
-
-```sql
-create table profiles (
-  id uuid references auth.users on delete cascade primary key,
-  email text,
-  avatar_url text
-);
+```bash
+cp .env.example .env.local
 ```
 
-### 🔐 Habilitar RLS e Políticas
+| Variável | Onde encontrar |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Chave `anon` `public` |
+| `SUPABASE_SERVICE_ROLE_KEY` | Chave `service_role` — **secreta**, usada só no servidor pela gamificação |
 
-```sql
-alter table profiles enable row level security;
+> A `service_role` nunca deve ir para o navegador nem receber o prefixo `NEXT_PUBLIC_`. Sem ela o sistema funciona normalmente, apenas sem a gamificação.
 
-create policy "Todos veem perfis"
-on profiles for select
-using (true);
+### 4. Rode
 
-create policy "Usuário atualiza próprio perfil"
-on profiles for update
-using (auth.uid() = id);
-
-create policy "Sistema insere perfil automático"
-on profiles for insert
-with check (true);
+```bash
+npm run dev
 ```
 
-### 📊 Criar uma VIEW para estatísticas
+Abra [http://localhost:3000](http://localhost:3000) e entre com um dos usuários cadastrados.
 
-```sql
-create or replace view user_task_stats as
-select 
-  p.id,
-  p.email,
-  p.avatar_url,
-  (select count(*) from tasks t where t.user_id = p.id) as total_tasks,
-  (select count(*) from tasks t where t.user_id = p.id and t.task_date = current_date) as tasks_today
-from profiles p;
-```
-⚠️ Importante:
-Vá em Storage no menu lateral do Supabase, clique em “New Bucket”,
-nomeie como avatars e marque a opção Public.
+### Publicar na Vercel
 
-### 🖼️ Passo 2: Permitir que o Usuário Suba a Foto
-**Arquivo:** src/app/page.tsx
+Importe o repositório na [Vercel](https://vercel.com) e cadastre as mesmas três variáveis em **Settings → Environment Variables**.
 
-Essa é a funcionalidade que vai dar “rosto” ao seu sistema!
-Para implementá-la, precisamos resolver três desafios:
+### Comandos
 
-.Onde salvar a foto
+| Comando | O que faz |
+|---|---|
+| `npm run dev` | Sobe o ambiente de desenvolvimento |
+| `npm run build` | Gera a versão de produção |
+| `npm run start` | Serve a versão de produção |
+| `npm test` | Roda os testes das regras de gamificação |
+| `npm run typecheck` | Confere os tipos |
+| `npm run lint` | Roda o ESLint |
 
-.Como vincular a foto ao usuário
+---
 
-.Como calcular estatísticas de tarefas de forma eficiente
+## Documentação
 
-### 🚀 Plano de Ação
+| Documento | Conteúdo |
+|---|---|
+| [Gamificação](./docs/GAMIFICACAO.md) | Regras completas, modelo de dados e como ajustar valores de XP, missões e níveis |
+| [Banco de dados](./docs/BANCO-DE-DADOS.md) | Tabelas, perfis, fotos e migrations |
+| [Contexto e próximos passos](./docs/GAMIFICACAO-CONTEXTO.md) | Histórico das decisões e o que vem a seguir |
 
-1. Configurar o banco e storage | 2. Criar upload da imagem de perfil no frontend | 3. Atualizar o campo avatar_url do usuário | 4. Exibir estatísticas com base na view user_task_stats
+## Créditos
 
-### 🧭 Passo 3: Criar a Página de Usuários
-
-**Arquivo:** src/app/usuarios/page.tsx
-
-Página responsável por listar os usuários, exibir suas fotos, e mostrar as estatísticas retornadas pela view user_task_stats.
+O personagem 3D é o modelo **RobotExpressive**, de Tomás Laulhé (Quaternius), com modificações de Don McCurdy, distribuído em domínio público (CC0). Detalhes em [`public/models/LICENSE.md`](./public/models/LICENSE.md).

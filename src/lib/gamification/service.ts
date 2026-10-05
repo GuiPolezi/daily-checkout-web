@@ -22,6 +22,7 @@ import {
   WEEKLY_MISSIONS,
 } from './missions'
 import { reconcileDay } from './reconcile'
+import { hasContributed, TEAM_GOALS, teamGoalProgress, teamGoalSourceId, teamWeekStats, type TeamWeekRow } from './team'
 import { computeStreak, type StreakState } from './streak'
 import { EVENT_TYPES, type DaySnapshot, type DayTotal, type NewEvent, type ProgressSummary, type SyncResult } from './types'
 import { computeDesiredAwards } from './xp'
@@ -53,6 +54,8 @@ export interface GamificationRepo {
   loadAchievementState(userId: string): Promise<AchievementState | null>
   /** Registra os desbloqueios e devolve os ids que foram realmente inseridos agora */
   unlockAchievements(userId: string, achievements: AchievementDefinition[]): Promise<string[]>
+  /** XP de atividade por pessoa e dia, de toda a equipe, no intervalo informado */
+  loadTeamWeek(start: string, end: string): Promise<TeamWeekRow[]>
   /** O que o usuário tem equipado (JSON livre; é validado pelo serviço) */
   loadAvatar(userId: string): Promise<unknown>
   /** Troca um slot; `merged` é o estado completo esperado, usado quando a troca atômica não está disponível */
@@ -168,6 +171,39 @@ async function syncWeeklyMissions(repo: GamificationRepo, userId: string, totals
   return { progress: weeklyMissionProgress(stats, alreadyPaid, config), paidXp: rewards.length > 0 }
 }
 
+/**
+ * Metas da equipe: quando a equipe bate a meta da semana, cada pessoa que contribuiu recebe a
+ * recompensa uma vez (na própria sincronização). A resposta só traz números agregados.
+ */
+async function syncTeamGoals(repo: GamificationRepo, userId: string, today: string, config: GamificationConfig) {
+  const week = weekRange(today)
+  const rows = await repo.loadTeamWeek(week.start, week.end)
+  const stats = teamWeekStats(rows, config)
+  const contributed = hasContributed(rows, userId)
+  const keyOf = (id: string) => `${userId}:team:${id}:${week.start}`
+
+  const existing = new Set(await repo.loadExistingKeys(TEAM_GOALS.map(goal => keyOf(goal.id))))
+  const alreadyPaid = new Set(TEAM_GOALS.filter(goal => existing.has(keyOf(goal.id))).map(goal => goal.id as string))
+
+  const rewards: NewEvent[] = TEAM_GOALS
+    .filter(goal => {
+      const { target, reward } = config.team.goals[goal.id]
+      return contributed && !alreadyPaid.has(goal.id) && target > 0 && reward > 0 && stats[goal.metric] >= target
+    })
+    .map(goal => ({
+      userId,
+      type: EVENT_TYPES.TEAM_GOAL,
+      amount: config.team.goals[goal.id].reward,
+      sourceId: teamGoalSourceId(goal.id),
+      day: null,
+      idempotencyKey: keyOf(goal.id),
+      metadata: { title: goal.title, goal: goal.id, weekStart: week.start, target: config.team.goals[goal.id].target },
+    }))
+
+  if (rewards.length > 0) await repo.insertEvents(rewards)
+  return { progress: teamGoalProgress(stats, contributed, alreadyPaid, config), paidXp: rewards.length > 0 }
+}
+
 export function buildSummary(totals: DayTotal[], streak: StreakState, today: string, config: GamificationConfig): ProgressSummary {
   const totalXp = sumXp(totals)
   const progress = levelFromXp(totalXp, config.level)
@@ -213,8 +249,12 @@ export async function syncDay(repo: GamificationRepo, userId: string, day: strin
   // Um extra pode falhar depois de já ter lançado XP; nesse caso os totais são relidos antes do resumo
   let extraFailed = false
   const markFailure = () => { extraFailed = true }
-  const reloadTotals = (current: DayTotal[]) =>
-    safely('releitura dos totais', current, () => repo.loadDayTotals(userId))
+  // true enquanto a última releitura tiver falhado: os totais em memória podem estar abaixo do ledger
+  let totalsStale = false
+  const reloadTotals = async (current: DayTotal[]) => {
+    totalsStale = false
+    return safely('releitura dos totais', current, () => repo.loadDayTotals(userId), () => { totalsStale = true })
+  }
 
   // ── Missões ──
   let missions: SyncResult['missions'] = null
@@ -226,6 +266,14 @@ export async function syncDay(repo: GamificationRepo, userId: string, day: strin
       daily: day === today ? dailyMissionProgress(dailyMissionStats(desired, snapshot.hasCheckout), config) : null,
       weekly: weekly?.progress ?? null,
     }
+  }
+
+  // ── Metas da equipe ──
+  let team: SyncResult['team'] = null
+  if (config.team.enabled) {
+    const goals = await safely('metas da equipe', null, () => syncTeamGoals(repo, userId, today, config), markFailure)
+    if (goals?.paidXp) totalsAfter = await reloadTotals(totalsAfter)
+    team = goals?.progress ?? null
   }
 
   // ── Conquistas ──
@@ -251,17 +299,20 @@ export async function syncDay(repo: GamificationRepo, userId: string, day: strin
     level = levelAfter
   }
 
-  if (extraFailed) totalsAfter = await reloadTotals(totalsAfter)
+  if (extraFailed || totalsStale) totalsAfter = await reloadTotals(totalsAfter)
   const summary = buildSummary(totalsAfter, streak, today, config)
 
-  // A projeção é regravada sempre: a sequência muda com o passar dos dias mesmo sem eventos novos
-  await repo.saveProgress(userId, {
-    totalXp: summary.totalXp,
-    currentStreak: streak.current,
-    bestStreak: streak.best,
-    streakShields: streak.shields,
-    lastActiveDay: streak.lastActiveDay,
-  })
+  // A projeção é regravada sempre: a sequência muda com o passar dos dias mesmo sem eventos novos.
+  // Se nem a releitura final funcionou, não grava um total que pode estar abaixo do ledger.
+  if (!totalsStale) {
+    await repo.saveProgress(userId, {
+      totalXp: summary.totalXp,
+      currentStreak: streak.current,
+      bestStreak: streak.best,
+      streakShields: streak.shields,
+      lastActiveDay: streak.lastActiveDay,
+    })
+  }
 
   const avatar = await safely<AvatarState | null>('personagem', null, async () =>
     resolveAvatar(await repo.loadAvatar(userId), summary.level)
@@ -281,9 +332,11 @@ export async function syncDay(repo: GamificationRepo, userId: string, day: strin
         .map(award => [award.sourceId.split(':')[1], { amount: award.amount, reason: award.reason }])
     ),
     unlocked,
-    achievementXp,
+    // Com totais defasados o delta não inclui o bônus; não o desconta para o aviso não esconder XP real
+    achievementXp: totalsStale ? 0 : achievementXp,
     achievements: achievements.achievements,
     missions,
+    team,
     avatar,
     summary,
   }

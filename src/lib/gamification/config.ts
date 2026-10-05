@@ -62,6 +62,19 @@ export interface GamificationConfig {
       weekly_xp_300: number
     }
   }
+  team: {
+    enabled: boolean
+    /**
+     * Mínimo de pessoas contribuindo na semana para o progresso da equipe ser exibido.
+     * Abaixo disso o total revelaria, por subtração, o número de um colega.
+     */
+    minContributorsToShow: number
+    /** Metas semanais da equipe (alvo 0 esconde a meta; recompensa 0 mantém a meta sem XP) */
+    goals: {
+      team_active_days: { target: number; reward: number }
+      team_activity_xp: { target: number; reward: number }
+    }
+  }
   backfill: {
     xpPerTask: number
   }
@@ -119,6 +132,15 @@ export const DEFAULT_CONFIG: GamificationConfig = {
       weekly_active_3: 20,
       weekly_active_5: 40,
       weekly_xp_300: 30,
+    },
+  },
+  team: {
+    enabled: true,
+    minContributorsToShow: 3,
+    // Valores provisórios, como os das missões; ajustar ao tamanho real da equipe
+    goals: {
+      team_active_days: { target: 10, reward: 20 },
+      team_activity_xp: { target: 500, reward: 20 },
     },
   },
   backfill: {

@@ -1,15 +1,21 @@
 'use client'
 
 import type { MissionProgress } from '@/src/lib/gamification/missions'
+import type { TeamGoalProgress } from '@/src/lib/gamification/team'
 import type { MissionsState } from './useGamification'
 
 interface Props {
   missions: MissionsState | null
+  /** Metas cooperativas da semana */
+  team?: TeamGoalProgress[] | null
   /** Na home o painel começa fechado para não empurrar o kanban; no perfil, aberto */
   defaultOpen?: boolean
 }
 
-function MissionRow({ mission }: { mission: MissionProgress }) {
+// Missões e metas da equipe são exibidas da mesma forma
+type MissionRowData = Pick<MissionProgress, 'title' | 'description' | 'current' | 'target' | 'reward' | 'done'> & { id: string }
+
+function MissionRow({ mission }: { mission: MissionRowData }) {
   const percent = Math.round((mission.current / mission.target) * 100)
 
   return (
@@ -51,29 +57,44 @@ function MissionRow({ mission }: { mission: MissionProgress }) {
   )
 }
 
-function MissionGroup({ label, missions }: { label: string; missions: MissionProgress[] }) {
+function MissionGroup({ label, note, missions }: { label: string; note?: string; missions: MissionRowData[] }) {
   return (
     <div>
       <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-ink-3">{label}</h3>
       <ul className="space-y-2">
         {missions.map(mission => <MissionRow key={mission.id} mission={mission} />)}
       </ul>
+      {note && <p className="mt-2 text-xs text-ink-3">{note}</p>}
     </div>
   )
 }
 
-export default function MissionsPanel({ missions, defaultOpen = false }: Props) {
+function teamNote(team: TeamGoalProgress[]): string {
+  const { contributors, contributed, progressHidden, minContributors } = team[0]
+  const call = contributed
+    ? 'Você já contribuiu nesta semana. Quem contribui recebe a recompensa ao abrir o sistema depois que a equipe bate a meta, até domingo.'
+    : 'Conclua uma tarefa ou rotina nesta semana para participar da recompensa.'
+  if (progressHidden || contributors === null) {
+    return `O progresso da equipe aparece quando pelo menos ${minContributors} pessoas contribuírem na semana. ${call}`
+  }
+  return `${contributors} pessoas contribuíram nesta semana. ${call}`
+}
+
+export default function MissionsPanel({ missions, team, defaultOpen = false }: Props) {
   const daily = missions?.daily ?? []
   const weekly = missions?.weekly ?? []
-  const all = [...daily, ...weekly]
+  const goals = team ?? []
+  const all: MissionRowData[] = [...daily, ...weekly, ...goals]
   if (all.length === 0) return null
 
-  const doneCount = all.filter(mission => mission.done).length
+  // Meta da equipe só conta como "sua" se você contribuiu (é quem recebe a recompensa)
+  const doneCount =
+    [...daily, ...weekly].filter(mission => mission.done).length + goals.filter(goal => goal.done && goal.contributed).length
 
   return (
     <details className="glass group rounded-[1.75rem]" open={defaultOpen}>
       <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 [&::-webkit-details-marker]:hidden">
-        <span className="text-[15px] font-semibold text-ink">Missões</span>
+        <span className="text-[15px] font-semibold text-ink">{goals.length > 0 ? 'Missões e metas da equipe' : 'Missões'}</span>
         <span className="flex items-center gap-2.5">
           <span className="chip chip-accent tabular-nums">{doneCount} de {all.length} concluídas</span>
           <svg
@@ -88,6 +109,7 @@ export default function MissionsPanel({ missions, defaultOpen = false }: Props) 
       <div className="grid grid-cols-1 gap-5 px-5 pb-5 lg:grid-cols-2">
         {daily.length > 0 && <MissionGroup label="Hoje" missions={daily} />}
         {weekly.length > 0 && <MissionGroup label="Esta semana" missions={weekly} />}
+        {goals.length > 0 && <MissionGroup label="Equipe · esta semana" missions={goals} note={teamNote(goals)} />}
       </div>
     </details>
   )

@@ -57,7 +57,8 @@ function taskAwards(day: string, tasks: DayTask[], streakDays: number, config: G
       const elapsedMs = task.createdAt
         ? new Date(task.completedAt).getTime() - new Date(task.createdAt).getTime()
         : Number.POSITIVE_INFINITY
-      if (elapsedMs < config.task.minSecondsToComplete * 1000) return zero('too_fast')
+      // Com o tempo mínimo em 0 a regra fica desligada de fato (nem diferença de relógio a aciona)
+      if (config.task.minSecondsToComplete > 0 && elapsedMs < config.task.minSecondsToComplete * 1000) return zero('too_fast')
 
       const title = normalizeTitle(task.title)
       if (config.task.dedupeTitles && seenTitles.has(title)) return zero('duplicate')

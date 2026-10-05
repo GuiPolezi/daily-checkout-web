@@ -347,7 +347,7 @@ export default function Home() {
               gainCount={game.gainCount}
               levelUpCount={game.levelUpCount}
             />
-            <MissionsPanel missions={game.missions} />
+            <MissionsPanel missions={game.missions} team={game.team} />
           </div>
         )}
 

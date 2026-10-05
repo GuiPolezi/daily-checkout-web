@@ -35,6 +35,7 @@ const EVENT_LABEL: Record<string, string> = {
   STREAK_BONUS: 'Marco de sequência',
   BONUS_REVERTED: 'Bônus estornado',
   MISSION_COMPLETED: 'Missão cumprida',
+  TEAM_GOAL: 'Meta da equipe batida',
   BACKFILL: 'Tarefas concluídas antes da gamificação',
   ACHIEVEMENT: 'Conquista desbloqueada',
 }
@@ -133,7 +134,7 @@ export default function ProfilePage() {
                 )}
 
                 <div className="rise" style={{ animationDelay: '90ms' }}>
-                  <MissionsPanel missions={game.missions} defaultOpen />
+                  <MissionsPanel missions={game.missions} team={game.team} defaultOpen />
                 </div>
                 {/* ─── NÚMEROS ─── */}
                 <section className="rise grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4" style={{ animationDelay: '100ms' }}>

@@ -4,6 +4,7 @@ import { DEFAULT_CONFIG } from '../config'
 import { addDays, isWorkday } from '../day'
 import { reconcileDay } from '../reconcile'
 import { equipAvatarItem, syncDay, type AchievementState, type GamificationRepo, type ProgressRow } from '../service'
+import type { TeamWeekRow } from '../team'
 import type { DayTask, DayTotal, NewEvent, RoutineTask } from '../types'
 
 const USER = 'user-1'
@@ -32,6 +33,10 @@ class FakeDb implements GamificationRepo {
   failNextUnlock = false
   // Missões também ficam desligadas por padrão, pelo mesmo motivo
   missionsEnabled = false
+  teamEnabled = false
+  // Simula falha de leitura dos totais a partir da N-ésima chamada (0 = nunca)
+  failTotalsFromCall = 0
+  private totalsCalls = 0
   avatar: unknown = null
   private nextTaskId = 1
 
@@ -58,7 +63,12 @@ class FakeDb implements GamificationRepo {
 
   async loadConfigOverride() {
     const override = (this.configOverride ?? {}) as Record<string, unknown>
-    return { missions: { enabled: this.missionsEnabled }, ...override }
+    const section = (key: string) => (override[key] ?? {}) as Record<string, unknown>
+    return {
+      ...override,
+      missions: { ...section('missions'), enabled: this.missionsEnabled },
+      team: { ...section('team'), enabled: this.teamEnabled },
+    }
   }
 
   async loadExistingKeys(keys: string[]) {
@@ -86,7 +96,21 @@ class FakeDb implements GamificationRepo {
     }
   }
 
+  // Mesma leitura da view xp_day_totals, para toda a equipe, no intervalo
+  async loadTeamWeek(start: string, end: string): Promise<TeamWeekRow[]> {
+    const byUserDay = new Map<string, TeamWeekRow>()
+    for (const event of this.events) {
+      if (event.day === null || event.day < start || event.day > end) continue
+      const key = `${event.userId}|${event.day}`
+      const row = byUserDay.get(key) ?? { userId: event.userId, day: event.day, activityXp: 0 }
+      byUserDay.set(key, { ...row, activityXp: row.activityXp + (ACTIVITY_TYPES.includes(event.type) ? event.amount : 0) })
+    }
+    return [...byUserDay.values()]
+  }
+
   async loadDayTotals(userId: string): Promise<DayTotal[]> {
+    this.totalsCalls += 1
+    if (this.failTotalsFromCall > 0 && this.totalsCalls >= this.failTotalsFromCall) throw new Error('leitura simulada falhou')
     const byDay = new Map<string | null, DayTotal>()
     for (const event of this.events.filter(e => e.userId === userId)) {
       const entry = byDay.get(event.day) ?? { day: event.day, totalXp: 0, activityXp: 0 }
@@ -536,6 +560,144 @@ describe('syncDay — missões', () => {
     const result = await sync(MONDAY)
     expect(result.missions).toBeNull()
     expect(result.delta).toBe(30)
+  })
+})
+
+describe('syncDay — metas da equipe', () => {
+  const OTHER = 'user-2'
+  const syncAs = (userId: string, day: string) => syncDay(db, userId, day, noon(day))
+
+  /** Lança no ledger um dia ativo de outra pessoa, sem passar pelas tarefas */
+  const activeDayFor = (userId: string, day: string, amount = 10) =>
+    db.insertEvents([{
+      userId, type: 'TASK_COMPLETED', amount, sourceId: `task:${userId}-${day}`, day,
+      idempotencyKey: `${userId}:${day}:fake`, metadata: {},
+    }])
+
+  beforeEach(() => {
+    db.teamEnabled = true
+    db.configOverride = {
+      team: {
+        minContributorsToShow: 1,
+        goals: { team_active_days: { target: 3, reward: 20 }, team_activity_xp: { target: 0, reward: 0 } },
+      },
+    }
+  })
+
+  it('soma a equipe inteira e paga quem contribuiu quando a meta é batida', async () => {
+    await activeDayFor(OTHER, MONDAY)
+    await activeDayFor(OTHER, addDays(MONDAY, 1))
+
+    const before = await syncAs(USER, addDays(MONDAY, 1))
+    expect(before.team).toMatchObject([{ id: 'team_active_days', current: 2, target: 3, done: false, contributors: 1, contributed: false }])
+    expect(before.delta).toBe(0)
+
+    const task = db.addTask(addDays(MONDAY, 1))
+    db.move(task, 'Concluída', `${addDays(MONDAY, 1)}T14:00:00Z`)
+    const after = await syncAs(USER, addDays(MONDAY, 1))
+    expect(after.team).toMatchObject([{ current: 3, done: true, contributors: 2, contributed: true }])
+    expect(after.delta).toBe(10 + 20)
+    expect(db.events.filter(e => e.type === 'TEAM_GOAL')).toMatchObject([{ userId: USER, amount: 20, day: null }])
+
+    expect((await syncAs(USER, addDays(MONDAY, 1))).delta).toBe(0)
+    expect(db.events.filter(e => e.type === 'TEAM_GOAL')).toHaveLength(1)
+  })
+
+  it('quem não contribuiu vê a meta batida mas não recebe', async () => {
+    for (const day of [MONDAY, addDays(MONDAY, 1), addDays(MONDAY, 2)]) await activeDayFor(OTHER, day)
+    const result = await syncAs(USER, addDays(MONDAY, 2))
+    expect(result.team).toMatchObject([{ done: true, contributed: false }])
+    expect(result.delta).toBe(0)
+    expect(db.events.some(e => e.type === 'TEAM_GOAL')).toBe(false)
+  })
+
+  it('a resposta não traz nada por pessoa', async () => {
+    await activeDayFor(OTHER, MONDAY)
+    const result = await syncAs(USER, MONDAY)
+    expect(JSON.stringify(result.team)).not.toContain(OTHER)
+    expect(Object.keys(result.team?.[0] ?? {}).sort()).toEqual(
+      ['contributed', 'contributors', 'current', 'description', 'done', 'id', 'minContributors', 'progressHidden', 'reward', 'target', 'title']
+    )
+  })
+
+  it('com poucas pessoas contribuindo, o total da equipe não sai do servidor', async () => {
+    db.configOverride = {
+      team: { minContributorsToShow: 3, goals: { team_active_days: { target: 9, reward: 20 }, team_activity_xp: { target: 500, reward: 20 } } },
+    }
+    await activeDayFor(OTHER, MONDAY, 80)
+    const task = db.addTask(MONDAY)
+    db.move(task, 'Concluída', `${MONDAY}T14:00:00Z`)
+    const result = await syncAs(USER, MONDAY)
+
+    // Duas pessoas ativas (abaixo do mínimo de 3): nada que permita subtrair e achar o número do colega
+    expect(result.team).toHaveLength(2)
+    for (const goal of result.team ?? []) {
+      expect(goal).toMatchObject({ current: 0, contributors: null, progressHidden: true, done: false, minContributors: 3 })
+    }
+    expect(JSON.stringify(result.team)).not.toContain('90')
+    expect(JSON.stringify(result.team)).not.toContain('80')
+  })
+
+  it('a partir do mínimo de contribuidores o progresso aparece', async () => {
+    db.configOverride = {
+      team: { minContributorsToShow: 3, goals: { team_active_days: { target: 9, reward: 20 }, team_activity_xp: { target: 0, reward: 0 } } },
+    }
+    await activeDayFor(OTHER, MONDAY)
+    await activeDayFor('user-3', MONDAY)
+    const task = db.addTask(MONDAY)
+    db.move(task, 'Concluída', `${MONDAY}T14:00:00Z`)
+    const result = await syncAs(USER, MONDAY)
+    expect(result.team).toMatchObject([{ current: 3, contributors: 3, progressHidden: false }])
+  })
+
+  it('meta batida com progresso oculto ainda paga quem contribuiu', async () => {
+    db.configOverride = {
+      team: { minContributorsToShow: 3, goals: { team_active_days: { target: 2, reward: 20 }, team_activity_xp: { target: 0, reward: 0 } } },
+    }
+    await activeDayFor(OTHER, MONDAY)
+    const task = db.addTask(MONDAY)
+    db.move(task, 'Concluída', `${MONDAY}T14:00:00Z`)
+    const result = await syncAs(USER, MONDAY)
+    expect(result.team).toMatchObject([{ done: true, current: 2, contributors: null, progressHidden: true }])
+    expect(db.events.filter(e => e.type === 'TEAM_GOAL')).toHaveLength(1)
+  })
+
+  it('a meta vale por semana e a recompensa não conta como dia ativo', async () => {
+    for (const day of [MONDAY, addDays(MONDAY, 1)]) await activeDayFor(OTHER, day)
+    const task = db.addTask(MONDAY)
+    db.move(task, 'Concluída', `${MONDAY}T14:00:00Z`)
+    await syncAs(USER, MONDAY)
+    expect(db.events.filter(e => e.type === 'TEAM_GOAL')).toHaveLength(1)
+
+    const nextWeek = await syncAs(USER, addDays(MONDAY, 7))
+    expect(nextWeek.team).toMatchObject([{ current: 0, done: false, contributed: false }])
+    expect(nextWeek.summary.currentStreak).toBe(0)
+  })
+
+  it('meta com alvo 0 some e, com metas desligadas, nada é enviado', async () => {
+    const result = await syncAs(USER, MONDAY)
+    expect(result.team?.map(goal => goal.id)).toEqual(['team_active_days'])
+    db.teamEnabled = false
+    expect((await syncAs(USER, MONDAY)).team).toBeNull()
+  })
+})
+
+describe('syncDay — falha de leitura depois de lançar XP', () => {
+  it('não grava total defasado nem esconde o XP da tarefa no aviso', async () => {
+    db.achievementsAvailable = true
+    const task = db.addTask(MONDAY)
+    db.move(task, 'Concluída', `${MONDAY}T14:00:00Z`)
+    // 1ª leitura: antes; 2ª: após os eventos do dia; 3ª em diante (após pagar a conquista) falham
+    db.failTotalsFromCall = 3
+    const result = await sync(MONDAY)
+    expect(db.ledgerTotal()).toBe(20)
+    expect(result.delta - result.achievementXp).toBe(10)
+    expect(db.progress).toBeNull()
+
+    db.failTotalsFromCall = 0
+    const next = await sync(MONDAY)
+    expect(next.summary.totalXp).toBe(20)
+    expect(db.progress?.totalXp).toBe(20)
   })
 })
 

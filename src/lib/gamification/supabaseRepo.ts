@@ -159,6 +159,24 @@ export function createSupabaseRepo(client: SupabaseClient = getServiceClient()):
       return rows.map(row => row.idempotency_key)
     },
 
+    async loadTeamWeek(start, end) {
+      const rows: { userId: string; day: string; activityXp: number }[] = []
+      for (let from = 0; ; from += PAGE_SIZE) {
+        const page = unwrap(
+          await client
+            .from('xp_day_totals')
+            .select('user_id,day,activity_xp')
+            .gte('day', start)
+            .lte('day', end)
+            .order('day', { ascending: true })
+            .order('user_id', { ascending: true })
+            .range(from, from + PAGE_SIZE - 1)
+        )
+        rows.push(...page.map(row => ({ userId: row.user_id, day: row.day, activityXp: row.activity_xp })))
+        if (page.length < PAGE_SIZE) return rows
+      }
+    },
+
     async loadAvatar(userId) {
       const rows = unwrap(await client.from('user_avatar').select('equipped').eq('user_id', userId).limit(1))
       return rows[0]?.equipped ?? null

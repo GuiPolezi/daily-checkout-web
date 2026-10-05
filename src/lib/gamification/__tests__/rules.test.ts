@@ -183,6 +183,11 @@ describe('computeDesiredAwards — tarefas avulsas', () => {
     expect(awardsFor(snapshot({ tasks: [t] }))).toMatchObject([{ amount: 10, reason: 'ok' }])
   })
 
+  it('com a regra desligada, nem diferença de relógio (conclusão "antes" da criação) tira o XP', () => {
+    const t = task({ createdAt: `${MONDAY}T15:00:05Z`, completedAt: `${MONDAY}T15:00:00Z` })
+    expect(awardsFor(snapshot({ tasks: [t] }))).toMatchObject([{ amount: 10, reason: 'ok' }])
+  })
+
   it('a regra do tempo mínimo pode ser ligada na configuração', () => {
     const cfg = mergeConfig({ task: { minSecondsToComplete: 60 } })
     const fast = task({ createdAt: `${MONDAY}T15:00:00Z`, completedAt: `${MONDAY}T15:00:30Z` })

@@ -43,6 +43,7 @@ export function useGamification() {
   const [achievementToasts, setAchievementToasts] = useState<AchievementToast[]>([])
   const [missions, setMissions] = useState<MissionsState | null>(null)
   const [avatar, setAvatar] = useState<AvatarState | null>(null)
+  const [team, setTeam] = useState<SyncResult['team']>(null)
   const [levelUp, setLevelUp] = useState<SyncResult['leveledUp']>(null)
   // Contadores que avisam o personagem para comemorar
   const [gainCount, setGainCount] = useState(0)
@@ -90,6 +91,7 @@ export function useGamification() {
       setTaskXp({ day: result.day, byTask: result.taskXp })
       setAchievements(result.achievements ?? null)
       setAvatar(result.avatar ?? null)
+      setTeam(result.team ?? null)
       // O progresso diário só vem quando o dia sincronizado é hoje; nos outros casos mantém o que já havia
       setMissions(current =>
         result.missions
@@ -156,5 +158,5 @@ export function useGamification() {
     }
   }, [])
 
-  return { summary, available, notConfigured, taskXp, achievements, achievementToasts, missions, avatar, equip, toasts, levelUp, dismissLevelUp, gainCount, levelUpCount, sync }
+  return { summary, available, notConfigured, taskXp, achievements, achievementToasts, missions, team, avatar, equip, toasts, levelUp, dismissLevelUp, gainCount, levelUpCount, sync }
 }

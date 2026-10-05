@@ -3,6 +3,7 @@
 import type { AchievementProgress } from './achievements'
 import type { AvatarState } from './avatar'
 import type { MissionProgress } from './missions'
+import type { TeamGoalProgress } from './team'
 import type { GamificationConfig, LevelTitle } from './config'
 
 export const EVENT_TYPES = {
@@ -15,6 +16,7 @@ export const EVENT_TYPES = {
   STREAK_BONUS: 'STREAK_BONUS',
   BONUS_REVERTED: 'BONUS_REVERTED',
   MISSION_COMPLETED: 'MISSION_COMPLETED',
+  TEAM_GOAL: 'TEAM_GOAL',
   BACKFILL: 'BACKFILL',
   ACHIEVEMENT: 'ACHIEVEMENT',
 } as const
@@ -121,6 +123,8 @@ export interface SyncResult {
   achievements: AchievementProgress[] | null
   /** Missões; null quando desligadas. `daily` só vem quando o dia sincronizado é hoje */
   missions: { daily: MissionProgress[] | null; weekly: MissionProgress[] | null } | null
+  /** Metas cooperativas da semana (só números da equipe, nada por pessoa); null se desligadas ou indisponíveis */
+  team: TeamGoalProgress[] | null
   /** Personagem: itens do catálogo e o que está equipado; null se indisponível */
   avatar: AvatarState | null
   summary: ProgressSummary

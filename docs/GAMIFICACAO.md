@@ -96,13 +96,28 @@ Objetivos curtos que dão um XP extra. **As recompensas atuais são provisórias
 - Missão **semanal** é paga uma vez por semana e não é retirada depois.
 - O XP de missão não conta como "dia ativo" para a sequência — a sequência depende de tarefa ou rotina de verdade.
 
+### Metas da equipe
+
+Metas semanais que valem para a equipe inteira, mostradas junto das missões. **Alvos e recompensas são provisórios.**
+
+| Meta | O que pede | XP (provisório) |
+|---|---|---|
+| Semana em Conjunto | Somando todo mundo, 10 dias úteis ativos na semana | 20 |
+| Colheita Coletiva | A equipe soma 500 XP de tarefas e rotinas na semana | 20 |
+
+- O painel mostra só o total da equipe e quantas pessoas contribuíram. Não há ranking nem lista por pessoa.
+- **O progresso só aparece quando pelo menos 3 pessoas contribuíram na semana.** Com menos gente, o total da equipe menos o seu próprio número revelaria o de um colega; nesse caso o painel mostra apenas se a meta foi batida ou não.
+- Mesmo com 3 ou mais pessoas, o total é da equipe e quem acompanha de perto consegue perceber quando ele sobe. Não é um dado mais sensível do que o que as telas Equipe e Histórico já mostram, mas vale saber.
+- Quando a meta é batida, quem teve pelo menos uma tarefa ou rotina com XP na semana recebe a recompensa, uma vez, **na próxima vez que abrir o sistema naquela mesma semana (até domingo)**. Quem não abrir o sistema depois que a meta foi batida não recebe a daquela semana.
+- Quem não contribuiu vê a meta, mas não recebe.
+
 ### Personagem
 
 Em **Meu Perfil** dá para escolher a cor do personagem, a cor da aura e a comemoração que ele faz quando você ganha XP. Os itens são liberados por nível e são só visuais. A opção "Automática" segue a cor da sua faixa de título. Este é um conjunto padrão inicial; itens personalizados entram depois.
 
 ### Onde ver
 
-- **Meu Dia**: card com o personagem, nível, título, barra de XP, sequência, escudos e XP de hoje, e o painel de missões (recolhido por padrão).
+- **Meu Dia**: card com o personagem, nível, título, barra de XP, sequência, escudos e XP de hoje, e o painel de missões e metas da equipe (recolhido por padrão).
 - **Meu Perfil**: totais, recorde de sequência, personalização do personagem, missões, conquistas, tabela dos próximos níveis e o histórico de cada lançamento de XP.
 
 ### Limitações conhecidas (para gestores)
@@ -156,6 +171,7 @@ A tela Meu Dia sincroniza ao abrir um dia e depois de mover, editar ou apagar ta
 - **`user_achievements`** — conquistas desbloqueadas por pessoa. O catálogo fica no código (`src/lib/gamification/achievements.ts`); a tabela `achievements` é espelhada pelo servidor conforme as conquistas são desbloqueadas.
 - **`xp_user_stats`** — view com as contagens usadas para desbloquear conquistas (migration 003).
 - **`user_avatar`** — o que cada pessoa tem equipado (JSON por slot). O catálogo de itens fica no código (`src/lib/gamification/avatar.ts`); a tabela `avatar_items` ainda não é usada. Quem grava é a rota `POST /api/gamification/avatar`, que confere no ledger se o nível libera o item.
+- **Metas da equipe** também não têm tabela: o servidor lê `xp_day_totals` de toda a equipe na semana (com a service role) e devolve só os agregados; a recompensa é um evento `TEAM_GOAL` sem dia, com chave `usuário:team:<id>:<segunda-feira da semana>`. O código fica em `src/lib/gamification/team.ts`.
 - **Missões** não têm tabela própria: as diárias são origens `mission:<id>` na reconciliação do dia; as semanais são eventos `MISSION_COMPLETED` sem dia, com chave `usuário:mission:<id>:<segunda-feira da semana>`. O catálogo fica em `src/lib/gamification/missions.ts`.
 
 Segurança: as tabelas de XP só têm política de leitura. Quem escreve é o servidor, com a `SUPABASE_SERVICE_ROLE_KEY`. Cada pessoa lê apenas o próprio histórico de XP.
@@ -168,8 +184,9 @@ Como não há duplicidade: a chave de cada lançamento é `usuário:dia:origem:s
 2. Rode `supabase/migrations/002_fechar_leitura_sem_login.sql`. É uma correção de segurança independente da gamificação (a gamificação funciona sem ela): impede que relatórios, perfis e estatísticas sejam lidos sem login. Nenhuma tela do sistema lê essas tabelas sem sessão, e o arquivo traz o comando para desfazer.
 3. Na **Vercel** (Settings → Environment Variables) e no `.env.local`, adicione `SUPABASE_SERVICE_ROLE_KEY` com a chave *service_role* do projeto (Supabase → Settings → API). Essa chave nunca deve receber o prefixo `NEXT_PUBLIC_`.
 4. Rode `supabase/migrations/003_conquistas.sql` para ligar as conquistas. Sem ela, XP, níveis e sequência funcionam normalmente e a seção de conquistas simplesmente não aparece.
-5. Opcional: rode `supabase/migrations/004_personagem_equip.sql`. A personalização do personagem funciona sem ela; a migration só impede que duas trocas feitas ao mesmo tempo (duas abas) se sobrescrevam.
-6. Faça o deploy.
+5. Opcional: rode `supabase/migrations/005_indice_metas_equipe.sql`, um índice que mantém rápida a leitura das metas da equipe quando o histórico crescer.
+6. Opcional: rode `supabase/migrations/004_personagem_equip.sql`. A personalização do personagem funciona sem ela; a migration só impede que duas trocas feitas ao mesmo tempo (duas abas) se sobrescrevam.
+7. Faça o deploy.
 
 Enquanto os passos 1 e 3 não forem feitos, a rota responde 503 e as telas simplesmente não mostram o card — o restante do sistema funciona como antes.
 
@@ -185,7 +202,7 @@ set params = '{"task": {"minSecondsToComplete": 60}, "bonus": {"dailyCheckout": 
 where id = 1;
 ```
 
-Parâmetros disponíveis: `timeZone`, `workdays`, `task` (`baseXp`, `routineBaseXp`, `priorityMultipliers`, `dailyCap`, `routineDailyCap`, `minSecondsToComplete`, `dedupeTitles`), `streak` (`multiplierPerDay`, `multiplierMax`, `shieldEvery`, `maxShields`, `milestones`, `milestoneBonus`), `bonus` (`dailyCheckout`, `perfectDay`), `level` (`coefficient`, `exponent`, `maxLevel`), `titles`, `achievements.enabled`, `missions` (`enabled` e `rewards` por missão) e `backfill.xpPerTask`.
+Parâmetros disponíveis: `timeZone`, `workdays`, `task` (`baseXp`, `routineBaseXp`, `priorityMultipliers`, `dailyCap`, `routineDailyCap`, `minSecondsToComplete`, `dedupeTitles`), `streak` (`multiplierPerDay`, `multiplierMax`, `shieldEvery`, `maxShields`, `milestones`, `milestoneBonus`), `bonus` (`dailyCheckout`, `perfectDay`), `level` (`coefficient`, `exponent`, `maxLevel`), `titles`, `achievements.enabled`, `missions` (`enabled` e `rewards` por missão), `team` (`enabled`, `minContributorsToShow` e, por meta, `target` e `reward`) e `backfill.xpPerTask`.
 
 Atenção: mudar a curva (`level`) muda o nível de todos imediatamente, porque o nível é derivado do XP. Mudar valores de XP vale para o dia de hoje em diante; dias já lançados só são recalculados se forem sincronizados de novo.
 
@@ -228,4 +245,4 @@ npm run build
 ### Próximas fases
 
 - **Fase 2 (em andamento)**: conquistas, missões (com recompensas provisórias) e um conjunto padrão de personalização já entregues; faltam os valores definitivos das missões e os itens personalizados do personagem.
-- **Fase 3**: metas cooperativas da equipe e painel do gestor (exige papéis de usuário).
+- **Fase 3 (em andamento)**: metas cooperativas da equipe já entregues, com valores provisórios; falta o painel do gestor, que depende de definir quem é gestor e o que ele pode ver.

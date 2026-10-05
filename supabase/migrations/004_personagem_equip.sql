@@ -15,7 +15,9 @@ as $$
   insert into public.user_avatar (user_id, equipped, updated_at)
   values (p_user_id, jsonb_build_object(p_slot, p_item), now())
   on conflict (user_id) do update
-    set equipped = public.user_avatar.equipped || excluded.equipped,
+    -- Se o valor salvo não for um objeto (dado antigo/inesperado), recomeça de um objeto vazio
+    set equipped = (case when jsonb_typeof(public.user_avatar.equipped) = 'object'
+                         then public.user_avatar.equipped else '{}'::jsonb end) || excluded.equipped,
         updated_at = now();
 $$;
 

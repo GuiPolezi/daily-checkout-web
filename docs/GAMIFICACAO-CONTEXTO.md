@@ -24,7 +24,7 @@ Arquivo de retomada. Registra onde o trabalho parou em **2026-10-05**, as decis�
 | `fa63985` | Documentação: limites de privacidade das metas de equipe |
 | `449666c` | Metas de equipe desligadas por padrão (foco individual) |
 
-O arquivo `prompt-gamificacao-daily-checkout.md` (o pedido original) está na raiz, commitado à parte (`5ad3e21`).
+O pedido original (`prompt-gamificacao-daily-checkout.md`) foi removido da raiz no commit `97c8de6`; continua disponível no histórico do git, em `5ad3e21`.
 
 ---
 

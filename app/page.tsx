@@ -291,17 +291,20 @@ export default function Home() {
             game.available ? 'lg:grid-cols-[minmax(0,1fr)_minmax(0,33rem)]' : ''
           }`}
         >
-          <div className="min-w-0">
+          {/* A coluna é um container: o título escala com a largura dela (cqw) para caber em uma linha */}
+          <div className="@container min-w-0">
+            {/* Largura deste bloco = largura do título; progresso e data ficam embaixo, sem passar dele */}
+            <div className="w-fit max-w-full">
             <p className="eyebrow mb-2">
               {isToday ? 'Hoje' : 'Navegando por'}
             </p>
-            <h2 className="text-3xl font-semibold capitalize leading-tight tracking-tight text-ink sm:text-4xl xl:text-[2.75rem] xl:leading-[1.08]">
+            <h2 className="text-[clamp(1.75rem,7.2cqw,3.5rem)] font-semibold capitalize leading-[1.1] tracking-tight text-ink">
               {formatDate(selectedDate)}
             </h2>
 
-            <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-5">
-              {/* Progresso do dia */}
-              <div className="min-w-0 flex-1">
+            <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-5">
+              {/* Progresso do dia — o recuo alinha a barra ao centro do seletor de data */}
+              <div className="min-w-24 flex-1 sm:pt-5">
                 <div
                   className="h-2 overflow-hidden rounded-full bg-fill-2"
                   role="progressbar"
@@ -358,6 +361,7 @@ export default function Home() {
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 5l7 7-7 7"/></svg>
               </button>
+            </div>
             </div>
             </div>
           </div>

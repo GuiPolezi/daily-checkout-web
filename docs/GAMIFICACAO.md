@@ -79,10 +79,32 @@ Medalhas permanentes por marcos de uso: tarefas concluídas (1, 50, 250, 1.000),
 - Só conta o que rendeu XP: uma tarefa que ficou "sem XP" não avança as conquistas.
 - A lista completa, com o seu progresso em cada uma, fica em **Meu Perfil**.
 
+### Missões
+
+Objetivos curtos que dão um XP extra. **As recompensas atuais são provisórias**, só para a mecânica poder ser testada; os valores definitivos ainda serão combinados.
+
+| Missão | O que pede | XP (provisório) |
+|---|---|---|
+| Três Notas (diária) | Concluir 3 tarefas que rendam XP no dia | 15 |
+| Ritual Duplo (diária) | Marcar 2 tarefas de rotina no dia | 10 |
+| Dia Redondo (diária) | Uma tarefa com XP, uma rotina e o checkout enviado | 15 |
+| Constância (semanal) | 3 dias úteis ativos na semana | 20 |
+| Semana Cheia (semanal) | 5 dias úteis ativos na semana | 40 |
+| Colheita da Semana (semanal) | Somar 300 XP na semana | 30 |
+
+- A semana vai de segunda a domingo.
+- Missão **diária** funciona como o resto do XP do dia: se você desfaz o que a cumpriu, o XP dela é estornado.
+- Missão **semanal** é paga uma vez por semana e não é retirada depois.
+- O XP de missão não conta como "dia ativo" para a sequência — a sequência depende de tarefa ou rotina de verdade.
+
+### Personagem
+
+Em **Meu Perfil** dá para escolher a cor do personagem, a cor da aura e a comemoração que ele faz quando você ganha XP. Os itens são liberados por nível e são só visuais. A opção "Automática" segue a cor da sua faixa de título. Este é um conjunto padrão inicial; itens personalizados entram depois.
+
 ### Onde ver
 
-- **Meu Dia**: card com o personagem, nível, título, barra de XP, sequência, escudos e XP de hoje.
-- **Meu Perfil**: totais, recorde de sequência, conquistas, tabela dos próximos níveis e o histórico de cada lançamento de XP.
+- **Meu Dia**: card com o personagem, nível, título, barra de XP, sequência, escudos e XP de hoje, e o painel de missões (recolhido por padrão).
+- **Meu Perfil**: totais, recorde de sequência, personalização do personagem, missões, conquistas, tabela dos próximos níveis e o histórico de cada lançamento de XP.
 
 ### Limitações conhecidas (para gestores)
 
@@ -134,7 +156,8 @@ A tela Meu Dia sincroniza ao abrir um dia e depois de mover, editar ou apagar ta
 - **`tasks.completed_at`** — preenchida por trigger no banco quando a tarefa entra em "Concluída". O cliente não consegue forjar essa data, nem `created_at`.
 - **`user_achievements`** — conquistas desbloqueadas por pessoa. O catálogo fica no código (`src/lib/gamification/achievements.ts`); a tabela `achievements` é espelhada pelo servidor conforme as conquistas são desbloqueadas.
 - **`xp_user_stats`** — view com as contagens usadas para desbloquear conquistas (migration 003).
-- `avatar_items`, `user_avatar` — criadas vazias para a personalização do personagem.
+- **`user_avatar`** — o que cada pessoa tem equipado (JSON por slot). O catálogo de itens fica no código (`src/lib/gamification/avatar.ts`); a tabela `avatar_items` ainda não é usada. Quem grava é a rota `POST /api/gamification/avatar`, que confere no ledger se o nível libera o item.
+- **Missões** não têm tabela própria: as diárias são origens `mission:<id>` na reconciliação do dia; as semanais são eventos `MISSION_COMPLETED` sem dia, com chave `usuário:mission:<id>:<segunda-feira da semana>`. O catálogo fica em `src/lib/gamification/missions.ts`.
 
 Segurança: as tabelas de XP só têm política de leitura. Quem escreve é o servidor, com a `SUPABASE_SERVICE_ROLE_KEY`. Cada pessoa lê apenas o próprio histórico de XP.
 
@@ -162,7 +185,7 @@ set params = '{"task": {"minSecondsToComplete": 0}, "bonus": {"dailyCheckout": 2
 where id = 1;
 ```
 
-Parâmetros disponíveis: `timeZone`, `workdays`, `task` (`baseXp`, `routineBaseXp`, `priorityMultipliers`, `dailyCap`, `routineDailyCap`, `minSecondsToComplete`, `dedupeTitles`), `streak` (`multiplierPerDay`, `multiplierMax`, `shieldEvery`, `maxShields`, `milestones`, `milestoneBonus`), `bonus` (`dailyCheckout`, `perfectDay`), `level` (`coefficient`, `exponent`, `maxLevel`), `titles`, `achievements.enabled` e `backfill.xpPerTask`.
+Parâmetros disponíveis: `timeZone`, `workdays`, `task` (`baseXp`, `routineBaseXp`, `priorityMultipliers`, `dailyCap`, `routineDailyCap`, `minSecondsToComplete`, `dedupeTitles`), `streak` (`multiplierPerDay`, `multiplierMax`, `shieldEvery`, `maxShields`, `milestones`, `milestoneBonus`), `bonus` (`dailyCheckout`, `perfectDay`), `level` (`coefficient`, `exponent`, `maxLevel`), `titles`, `achievements.enabled`, `missions` (`enabled` e `rewards` por missão) e `backfill.xpPerTask`.
 
 Atenção: mudar a curva (`level`) muda o nível de todos imediatamente, porque o nível é derivado do XP. Mudar valores de XP vale para o dia de hoje em diante; dias já lançados só são recalculados se forem sincronizados de novo.
 
@@ -202,5 +225,5 @@ npm run build
 
 ### Próximas fases
 
-- **Fase 2 (em andamento)**: conquistas já entregues; faltam personalização do personagem por nível e missões.
+- **Fase 2 (em andamento)**: conquistas, missões (com recompensas provisórias) e um conjunto padrão de personalização já entregues; faltam os valores definitivos das missões e os itens personalizados do personagem.
 - **Fase 3**: metas cooperativas da equipe e painel do gestor (exige papéis de usuário).

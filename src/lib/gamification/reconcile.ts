@@ -9,6 +9,7 @@ const TYPE_BY_KIND: Record<AwardKind, { gain: EventType; loss: EventType }> = {
   checkout: { gain: EVENT_TYPES.DAILY_CHECKOUT, loss: EVENT_TYPES.BONUS_REVERTED },
   perfect_day: { gain: EVENT_TYPES.PERFECT_DAY, loss: EVENT_TYPES.BONUS_REVERTED },
   streak_milestone: { gain: EVENT_TYPES.STREAK_BONUS, loss: EVENT_TYPES.BONUS_REVERTED },
+  mission: { gain: EVENT_TYPES.MISSION_COMPLETED, loss: EVENT_TYPES.BONUS_REVERTED },
 }
 
 const KIND_BY_PREFIX: Record<string, AwardKind> = {
@@ -17,6 +18,7 @@ const KIND_BY_PREFIX: Record<string, AwardKind> = {
   checkout: 'checkout',
   perfect_day: 'perfect_day',
   streak_milestone: 'streak_milestone',
+  mission: 'mission',
 }
 
 export function kindOfSource(sourceId: string): AwardKind | null {

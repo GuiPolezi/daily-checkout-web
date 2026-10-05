@@ -8,9 +8,19 @@ import {
   type AchievementDefinition,
   type AchievementStats,
 } from './achievements'
+import { checkEquip, resolveAvatar, type AvatarSlot, type AvatarState, type EquipError } from './avatar'
 import { mergeConfig, type GamificationConfig } from './config'
 import { localDay } from './day'
 import { levelFromXp, tierForLevel, titleForLevel } from './levels'
+import {
+  dailyMissionProgress,
+  dailyMissionStats,
+  missionSourceId,
+  weeklyMissionProgress,
+  weeklyMissionStats,
+  weekRange,
+  WEEKLY_MISSIONS,
+} from './missions'
 import { reconcileDay } from './reconcile'
 import { computeStreak, type StreakState } from './streak'
 import { EVENT_TYPES, type DaySnapshot, type DayTotal, type NewEvent, type ProgressSummary, type SyncResult } from './types'
@@ -24,6 +34,11 @@ export interface ProgressRow {
   lastActiveDay: string | null
 }
 
+export interface AchievementState {
+  counts: Pick<AchievementStats, 'tasksCompleted' | 'routinesCompleted' | 'checkouts' | 'perfectDays'>
+  unlocked: { id: string; unlockedAt: string }[]
+}
+
 export interface GamificationRepo {
   /** JSON de sobrescrita vindo de gamification_config (ou null) */
   loadConfigOverride(): Promise<unknown>
@@ -31,16 +46,43 @@ export interface GamificationRepo {
   loadDayTotals(userId: string): Promise<DayTotal[]>
   /** Deve ignorar eventos cuja idempotency_key já exista */
   insertEvents(events: NewEvent[]): Promise<void>
+  /** Das chaves informadas, quais já existem no ledger */
+  loadExistingKeys(keys: string[]): Promise<string[]>
   saveProgress(userId: string, progress: ProgressRow): Promise<void>
   /** Contagens e conquistas já desbloqueadas; null se a estrutura de conquistas ainda não existe no banco */
   loadAchievementState(userId: string): Promise<AchievementState | null>
-  unlockAchievements(userId: string, achievements: AchievementDefinition[]): Promise<void>
+  /** Registra os desbloqueios e devolve os ids que foram realmente inseridos agora */
+  unlockAchievements(userId: string, achievements: AchievementDefinition[]): Promise<string[]>
+  /** O que o usuário tem equipado (JSON livre; é validado pelo serviço) */
+  loadAvatar(userId: string): Promise<unknown>
+  saveAvatar(userId: string, equipped: Record<AvatarSlot, string>): Promise<void>
 }
 
-export interface AchievementState {
-  counts: Pick<AchievementStats, 'tasksCompleted' | 'routinesCompleted' | 'checkouts' | 'perfectDays'>
-  unlocked: { id: string; unlockedAt: string }[]
+const MAX_ACHIEVEMENT_PASSES = 3
+
+const sumXp = (totals: DayTotal[]) => Math.max(0, totals.reduce((sum, t) => sum + t.totalXp, 0))
+
+const levelOf = (totals: DayTotal[], config: GamificationConfig) => levelFromXp(sumXp(totals), config.level).level
+
+const activeDays = (totals: DayTotal[]) =>
+  totals.filter((t): t is DayTotal & { day: string } => t.day !== null && t.activityXp > 0).map(t => t.day)
+
+/**
+ * Conquistas, missões semanais e personagem são extras: se um deles falhar, o XP do dia
+ * (que já foi lançado) não pode ser derrubado junto. A falha é registrada e o extra some da resposta.
+ */
+async function safely<T>(label: string, fallback: T, run: () => Promise<T>): Promise<T> {
+  try {
+    return await run()
+  } catch (error) {
+    console.error(`[gamification] ${label} falhou`, error instanceof Error ? error.message : error)
+    return fallback
+  }
 }
+
+type AchievementsResult = Pick<SyncResult, 'unlocked' | 'achievements'> & { paidXp: boolean }
+
+const NO_ACHIEVEMENTS: AchievementsResult = { unlocked: [], achievements: null, paidXp: false }
 
 /**
  * Desbloqueia o que o usuário já conquistou. O XP da conquista entra no ledger com chave própria
@@ -52,10 +94,10 @@ async function syncAchievements(
   extra: Pick<AchievementStats, 'bestStreak' | 'level'>,
   now: Date,
   config: GamificationConfig
-): Promise<Pick<SyncResult, 'unlocked' | 'achievements'> & { paidXp: boolean }> {
-  if (!config.achievements.enabled) return { unlocked: [], achievements: null, paidXp: false }
+): Promise<AchievementsResult> {
+  if (!config.achievements.enabled) return NO_ACHIEVEMENTS
   const state = await repo.loadAchievementState(userId)
-  if (!state) return { unlocked: [], achievements: null, paidXp: false }
+  if (!state) return NO_ACHIEVEMENTS
 
   const stats: AchievementStats = { ...state.counts, ...extra }
   const fresh = findNewAchievements(stats, state.unlocked.map(item => item.id))
@@ -71,24 +113,48 @@ async function syncAchievements(
       metadata: { title: item.title, metric: item.metric, target: item.target },
     }))
 
+  let inserted: string[] = []
   if (fresh.length > 0) {
     // O XP vai primeiro: se o registro do desbloqueio falhar, a próxima sincronização repete os dois passos sem duplicar
     await repo.insertEvents(rewards)
-    await repo.unlockAchievements(userId, fresh)
+    inserted = await repo.unlockAchievements(userId, fresh)
   }
 
   const unlockedAt = now.toISOString()
   return {
-    unlocked: fresh.map(({ id, title, description, xpReward }) => ({ id, title, description, xpReward })),
+    // Só o que esta sincronização registrou de fato: outra aba simultânea não repete o aviso
+    unlocked: fresh
+      .filter(item => inserted.includes(item.id))
+      .map(({ id, title, description, xpReward }) => ({ id, title, description, xpReward })),
     achievements: achievementProgress(stats, [...state.unlocked, ...fresh.map(item => ({ id: item.id, unlockedAt }))]),
     paidXp: rewards.length > 0,
   }
 }
 
-const sumXp = (totals: DayTotal[]) => Math.max(0, totals.reduce((sum, t) => sum + t.totalXp, 0))
+/** Paga as missões semanais cumpridas (uma vez por semana cada) e devolve o progresso da semana. */
+async function syncWeeklyMissions(repo: GamificationRepo, userId: string, totals: DayTotal[], today: string, config: GamificationConfig) {
+  const week = weekRange(today)
+  const stats = weeklyMissionStats(totals, today, config)
+  const keyOf = (id: string) => `${userId}:mission:${id}:${week.start}`
 
-const activeDays = (totals: DayTotal[]) =>
-  totals.filter((t): t is DayTotal & { day: string } => t.day !== null && t.activityXp > 0).map(t => t.day)
+  const existing = new Set(await repo.loadExistingKeys(WEEKLY_MISSIONS.map(mission => keyOf(mission.id))))
+  const alreadyPaid = new Set(WEEKLY_MISSIONS.filter(mission => existing.has(keyOf(mission.id))).map(mission => mission.id as string))
+
+  const rewards: NewEvent[] = WEEKLY_MISSIONS
+    .filter(mission => !alreadyPaid.has(mission.id) && stats[mission.metric] >= mission.target && config.missions.rewards[mission.id] > 0)
+    .map(mission => ({
+      userId,
+      type: EVENT_TYPES.MISSION_COMPLETED,
+      amount: config.missions.rewards[mission.id],
+      sourceId: missionSourceId(mission.id),
+      day: null,
+      idempotencyKey: keyOf(mission.id),
+      metadata: { title: mission.title, mission: mission.id, weekStart: week.start, target: mission.target },
+    }))
+
+  if (rewards.length > 0) await repo.insertEvents(rewards)
+  return { progress: weeklyMissionProgress(stats, alreadyPaid, config), paidXp: rewards.length > 0 }
+}
 
 export function buildSummary(totals: DayTotal[], streak: StreakState, today: string, config: GamificationConfig): ProgressSummary {
   const totalXp = sumXp(totals)
@@ -132,10 +198,35 @@ export async function syncDay(repo: GamificationRepo, userId: string, day: strin
     totalsAfter = await repo.loadDayTotals(userId)
   }
 
+  // ── Missões ──
+  let missions: SyncResult['missions'] = null
+  if (config.missions.enabled) {
+    const weekly = await safely('missões semanais', null, () => syncWeeklyMissions(repo, userId, totalsAfter, today, config))
+    if (weekly?.paidXp) totalsAfter = await repo.loadDayTotals(userId)
+    missions = {
+      // O progresso diário só faz sentido para hoje; ao sincronizar outro dia ele não é enviado
+      daily: day === today ? dailyMissionProgress(dailyMissionStats(desired, snapshot.hasCheckout), config) : null,
+      weekly: weekly?.progress ?? null,
+    }
+  }
+
+  // ── Conquistas ──
   const streak = computeStreak(activeDays(totalsAfter), today, config)
-  const levelNow = levelFromXp(sumXp(totalsAfter), config.level).level
-  const achievements = await syncAchievements(repo, userId, { bestStreak: streak.best, level: levelNow }, now, config)
-  if (achievements.paidXp) totalsAfter = await repo.loadDayTotals(userId)
+  let achievements = NO_ACHIEVEMENTS
+  const unlocked: SyncResult['unlocked'] = []
+  let level = levelOf(totalsAfter, config)
+  for (let pass = 0; pass < MAX_ACHIEVEMENT_PASSES; pass += 1) {
+    achievements = await safely('conquistas', NO_ACHIEVEMENTS, () =>
+      syncAchievements(repo, userId, { bestStreak: streak.best, level }, now, config)
+    )
+    unlocked.push(...achievements.unlocked)
+    if (!achievements.paidXp) break
+    totalsAfter = await repo.loadDayTotals(userId)
+    // O bônus de uma conquista pode subir o nível e liberar outra: reavalia enquanto o nível mudar
+    const levelAfter = levelOf(totalsAfter, config)
+    if (levelAfter === level) break
+    level = levelAfter
+  }
 
   const summary = buildSummary(totalsAfter, streak, today, config)
 
@@ -148,7 +239,11 @@ export async function syncDay(repo: GamificationRepo, userId: string, day: strin
     lastActiveDay: streak.lastActiveDay,
   })
 
-  const levelBefore = levelFromXp(sumXp(totalsBefore), config.level).level
+  const avatar = await safely<AvatarState | null>('personagem', null, async () =>
+    resolveAvatar(await repo.loadAvatar(userId), summary.level)
+  )
+
+  const levelBefore = levelOf(totalsBefore, config)
   const delta = sumXp(totalsAfter) - sumXp(totalsBefore)
 
   return {
@@ -161,8 +256,34 @@ export async function syncDay(repo: GamificationRepo, userId: string, day: strin
         .filter(award => award.kind === 'task')
         .map(award => [award.sourceId.split(':')[1], { amount: award.amount, reason: award.reason }])
     ),
-    unlocked: achievements.unlocked,
+    unlocked,
     achievements: achievements.achievements,
+    missions,
+    avatar,
     summary,
   }
+}
+
+export class EquipAvatarError extends Error {
+  constructor(public readonly reason: EquipError) {
+    super(reason)
+    this.name = 'EquipAvatarError'
+  }
+}
+
+/**
+ * Equipa um item do personagem. O servidor confere, pelo XP do ledger, se o nível do usuário
+ * libera o item — o cliente não decide o que está desbloqueado.
+ */
+export async function equipAvatarItem(repo: GamificationRepo, userId: string, slot: AvatarSlot, itemId: string): Promise<AvatarState> {
+  const config = mergeConfig(await repo.loadConfigOverride())
+  const level = levelOf(await repo.loadDayTotals(userId), config)
+
+  const problem = checkEquip(slot, itemId, level)
+  if (problem) throw new EquipAvatarError(problem)
+
+  const current = resolveAvatar(await repo.loadAvatar(userId), level)
+  const equipped = { ...current.equipped, [slot]: itemId }
+  await repo.saveAvatar(userId, equipped)
+  return { ...current, equipped }
 }

@@ -1,11 +1,15 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
+import type { AvatarState } from '@/src/lib/gamification/avatar'
 import Character2D from './Character2D'
+import { resolveLook } from './tiers'
 
 interface Props {
   tier: number
+  /** Itens equipados; sem isso o personagem usa só as cores da faixa de nível */
+  avatar?: AvatarState | null
   gainCount: number
   levelUpCount: number
 }
@@ -32,7 +36,14 @@ function canUse3D(): boolean {
   }
 }
 
-export default function Character({ tier, gainCount, levelUpCount }: Props) {
+export default function Character({ tier, avatar, gainCount, levelUpCount }: Props) {
+  const equipped = avatar?.equipped
+  // Objeto estável: o 3D só reaplica as cores quando algo muda de fato
+  const look = useMemo(
+    () => resolveLook(tier, avatar),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [tier, equipped?.body, equipped?.aura, equipped?.celebration]
+  )
   const [mode, setMode] = useState<'2d' | '3d'>('2d')
   const [ready, setReady] = useState(false)
 
@@ -52,12 +63,12 @@ export default function Character({ tier, gainCount, levelUpCount }: Props) {
     <div className="relative h-full w-full">
       {/* O 2D fica à mostra até o modelo 3D terminar de carregar */}
       <div className={`h-full w-full transition-opacity duration-500 ${ready ? 'opacity-0' : 'opacity-100'}`}>
-        <Character2D tier={tier} />
+        <Character2D look={look} />
       </div>
       {mode === '3d' && (
         <div className="absolute inset-0">
           <Character3D
-            tier={tier}
+            look={look}
             gainCount={gainCount}
             levelUpCount={levelUpCount}
             onReady={() => setReady(true)}

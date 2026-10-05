@@ -1,6 +1,8 @@
 // Tipos compartilhados entre as regras (puras), o serviço e as telas.
 
 import type { AchievementProgress } from './achievements'
+import type { AvatarState } from './avatar'
+import type { MissionProgress } from './missions'
 import type { GamificationConfig, LevelTitle } from './config'
 
 export const EVENT_TYPES = {
@@ -12,13 +14,14 @@ export const EVENT_TYPES = {
   PERFECT_DAY: 'PERFECT_DAY',
   STREAK_BONUS: 'STREAK_BONUS',
   BONUS_REVERTED: 'BONUS_REVERTED',
+  MISSION_COMPLETED: 'MISSION_COMPLETED',
   BACKFILL: 'BACKFILL',
   ACHIEVEMENT: 'ACHIEVEMENT',
 } as const
 
 export type EventType = (typeof EVENT_TYPES)[keyof typeof EVENT_TYPES]
 
-export type AwardKind = 'task' | 'routine' | 'checkout' | 'perfect_day' | 'streak_milestone'
+export type AwardKind = 'task' | 'routine' | 'checkout' | 'perfect_day' | 'streak_milestone' | 'mission'
 
 export type AwardReason =
   | 'ok'
@@ -114,5 +117,9 @@ export interface SyncResult {
   unlocked: { id: string; title: string; description: string; xpReward: number }[]
   /** Catálogo com o progresso do usuário; null quando as conquistas não estão disponíveis */
   achievements: AchievementProgress[] | null
+  /** Missões; null quando desligadas. `daily` só vem quando o dia sincronizado é hoje */
+  missions: { daily: MissionProgress[] | null; weekly: MissionProgress[] | null } | null
+  /** Personagem: itens do catálogo e o que está equipado; null se indisponível */
+  avatar: AvatarState | null
   summary: ProgressSummary
 }

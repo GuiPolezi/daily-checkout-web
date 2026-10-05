@@ -1,11 +1,13 @@
 'use client'
 
 import Link from 'next/link'
+import type { AvatarState } from '@/src/lib/gamification/avatar'
 import type { ProgressSummary } from '@/src/lib/gamification/types'
 import Character from './Character'
 
 interface Props {
   summary: ProgressSummary | null
+  avatar?: AvatarState | null
   name: string
   gainCount: number
   levelUpCount: number
@@ -15,7 +17,7 @@ interface Props {
 
 const plural = (count: number, one: string, many: string) => (count === 1 ? one : many)
 
-export default function ProfileCard({ summary, name, gainCount, levelUpCount, hideProfileLink = false }: Props) {
+export default function ProfileCard({ summary, avatar, name, gainCount, levelUpCount, hideProfileLink = false }: Props) {
   if (!summary) {
     return (
       <section className="glass flex items-center gap-4 rounded-[1.75rem] p-4 sm:gap-6 sm:p-5" aria-busy="true" aria-label="Carregando seu perfil">
@@ -39,7 +41,7 @@ export default function ProfileCard({ summary, name, gainCount, levelUpCount, hi
   return (
     <section className="glass flex items-center gap-4 rounded-[1.75rem] p-4 sm:gap-6 sm:p-5" aria-label="Seu perfil de jogador">
       <div className="h-24 w-24 shrink-0 overflow-hidden rounded-3xl bg-fill-soft sm:h-32 sm:w-32">
-        <Character tier={summary.tier} gainCount={gainCount} levelUpCount={levelUpCount} />
+        <Character tier={summary.tier} avatar={avatar} gainCount={gainCount} levelUpCount={levelUpCount} />
       </div>
 
       <div className="min-w-0 flex-1">

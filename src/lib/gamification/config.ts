@@ -50,6 +50,18 @@ export interface GamificationConfig {
   achievements: {
     enabled: boolean
   }
+  missions: {
+    enabled: boolean
+    /** XP de cada missão (0 desliga a recompensa daquela missão) */
+    rewards: {
+      daily_tasks_3: number
+      daily_routine_2: number
+      daily_full: number
+      weekly_active_3: number
+      weekly_active_5: number
+      weekly_xp_300: number
+    }
+  }
   backfill: {
     xpPerTask: number
   }
@@ -95,6 +107,18 @@ export const DEFAULT_CONFIG: GamificationConfig = {
   ],
   achievements: {
     enabled: true,
+  },
+  missions: {
+    enabled: true,
+    // Valores provisórios, para a mecânica poder ser testada; ajustar depois com a equipe
+    rewards: {
+      daily_tasks_3: 15,
+      daily_routine_2: 10,
+      daily_full: 15,
+      weekly_active_3: 20,
+      weekly_active_5: 40,
+      weekly_xp_300: 30,
+    },
   },
   backfill: {
     xpPerTask: 10,

@@ -3,7 +3,7 @@ import { ACHIEVEMENTS, findNewAchievements, type AchievementDefinition, type Ach
 import { DEFAULT_CONFIG } from '../config'
 import { addDays, isWorkday } from '../day'
 import { reconcileDay } from '../reconcile'
-import { syncDay, type AchievementState, type GamificationRepo, type ProgressRow } from '../service'
+import { equipAvatarItem, syncDay, type AchievementState, type GamificationRepo, type ProgressRow } from '../service'
 import type { DayTask, DayTotal, NewEvent, RoutineTask } from '../types'
 
 const USER = 'user-1'
@@ -30,6 +30,9 @@ class FakeDb implements GamificationRepo {
   achievementsAvailable = false
   unlocked: { id: string; unlockedAt: string }[] = []
   failNextUnlock = false
+  // Missões também ficam desligadas por padrão, pelo mesmo motivo
+  missionsEnabled = false
+  avatar: unknown = null
   private nextTaskId = 1
 
   addTask(day: string, overrides: Partial<StoredTask> = {}): StoredTask {
@@ -54,7 +57,20 @@ class FakeDb implements GamificationRepo {
   }
 
   async loadConfigOverride() {
-    return this.configOverride
+    const override = (this.configOverride ?? {}) as Record<string, unknown>
+    return { missions: { enabled: this.missionsEnabled }, ...override }
+  }
+
+  async loadExistingKeys(keys: string[]) {
+    return this.events.map(e => e.idempotencyKey).filter(key => keys.includes(key))
+  }
+
+  async loadAvatar() {
+    return this.avatar
+  }
+
+  async saveAvatar(_userId: string, equipped: Record<string, string>) {
+    this.avatar = equipped
   }
 
   async loadDay(userId: string, day: string) {
@@ -118,9 +134,13 @@ class FakeDb implements GamificationRepo {
       this.failNextUnlock = false
       throw new Error('falha simulada')
     }
+    const inserted: string[] = []
     for (const item of achievements) {
-      if (!this.unlocked.some(u => u.id === item.id)) this.unlocked.push({ id: item.id, unlockedAt: '2026-03-02T15:00:00Z' })
+      if (this.unlocked.some(u => u.id === item.id)) continue
+      this.unlocked.push({ id: item.id, unlockedAt: '2026-03-02T15:00:00Z' })
+      inserted.push(item.id)
     }
+    return inserted
   }
 
   ledgerTotal() {
@@ -372,16 +392,40 @@ describe('syncDay — conquistas', () => {
     expect(later.summary.xpToday).toBe(10)
   })
 
-  it('se o registro do desbloqueio falhar, a nova tentativa não paga em dobro', async () => {
+  it('se o registro do desbloqueio falhar, o XP do dia não cai junto e a nova tentativa não paga em dobro', async () => {
     const task = db.addTask(MONDAY)
     db.move(task, 'Concluída', `${MONDAY}T14:00:00Z`)
     db.failNextUnlock = true
-    await expect(sync(MONDAY)).rejects.toThrow('falha simulada')
+    const failed = await sync(MONDAY)
+    expect(failed.events).toMatchObject([{ type: 'TASK_COMPLETED', amount: 10 }])
+    expect(failed.achievements).toBeNull()
+    expect(failed.unlocked).toEqual([])
+    expect(db.progress).not.toBeNull()
 
     const retry = await sync(MONDAY)
     expect(retry.unlocked.map(a => a.id)).toEqual(['tasks_1'])
     expect(db.events.filter(e => e.type === 'ACHIEVEMENT')).toHaveLength(1)
     expect(retry.summary.totalXp).toBe(20)
+  })
+
+  it('o bônus de uma conquista que sobe o nível libera a conquista de nível na mesma sincronização', async () => {
+    // Com coeficiente 1 o nível 5 pede 17 XP: os 10 da tarefa não bastam, os 10 da conquista completam
+    db.configOverride = { level: { coefficient: 1 } }
+    const task = db.addTask(MONDAY)
+    db.move(task, 'Concluída', `${MONDAY}T14:00:00Z`)
+    const result = await sync(MONDAY)
+    expect(result.summary.level).toBeGreaterThanOrEqual(5)
+    expect(result.unlocked.map(a => a.id)).toEqual(['tasks_1', 'level_5'])
+    expect(result.achievements?.find(a => a.id === 'level_5')?.unlockedAt).not.toBeNull()
+    expect(db.events.filter(e => e.type === 'ACHIEVEMENT')).toHaveLength(1)
+  })
+
+  it('só avisa a conquista que esta sincronização registrou', async () => {
+    const task = db.addTask(MONDAY)
+    db.move(task, 'Concluída', `${MONDAY}T14:00:00Z`)
+    const [a, b] = await Promise.all([sync(MONDAY), sync(MONDAY)])
+    expect([...a.unlocked, ...b.unlocked].map(item => item.id)).toEqual(['tasks_1'])
+    expect(db.events.filter(e => e.type === 'ACHIEVEMENT')).toHaveLength(1)
   })
 
   it('checkout e dia perfeito desbloqueiam as conquistas correspondentes', async () => {
@@ -410,6 +454,110 @@ describe('syncDay — conquistas', () => {
     const result = await sync(MONDAY)
     expect(result.delta).toBe(10)
     expect(result.achievements).toBeNull()
+  })
+})
+
+describe('syncDay — missões', () => {
+  beforeEach(() => {
+    db.missionsEnabled = true
+  })
+
+  const completeTasks = (day: string, count: number) =>
+    Array.from({ length: count }, (_, i) => {
+      const task = db.addTask(day)
+      db.move(task, 'Concluída', `${day}T14:${String(i).padStart(2, '0')}:00Z`)
+      return task
+    })
+
+  it('missão diária paga uma vez e é estornada quando deixa de valer', async () => {
+    const tasks = completeTasks(MONDAY, 3)
+    const done = await sync(MONDAY)
+    expect(done.delta).toBe(30 + 15)
+    expect(done.missions?.daily?.find(m => m.id === 'daily_tasks_3')).toMatchObject({ done: true, current: 3, reward: 15 })
+
+    expect((await sync(MONDAY)).delta).toBe(0)
+
+    db.move(tasks[0], 'A Fazer', `${MONDAY}T14:30:00Z`)
+    const undone = await sync(MONDAY)
+    expect(undone.delta).toBe(-(10 + 15))
+    expect(undone.missions?.daily?.find(m => m.id === 'daily_tasks_3')).toMatchObject({ done: false, current: 2 })
+    expect(undone.summary.totalXp).toBe(20)
+  })
+
+  it('XP de missão não torna o dia ativo', async () => {
+    completeTasks(MONDAY, 3)
+    const result = await sync(MONDAY)
+    expect(result.summary.currentStreak).toBe(1)
+    const totals = await db.loadDayTotals(USER)
+    expect(totals.find(t => t.day === MONDAY)).toMatchObject({ totalXp: 45, activityXp: 30 })
+  })
+
+  it('missão semanal paga uma vez por semana e de novo na semana seguinte', async () => {
+    const weekDays = [MONDAY, addDays(MONDAY, 1), addDays(MONDAY, 2)]
+    let last = await sync(MONDAY)
+    for (const day of weekDays) {
+      completeTasks(day, 1)
+      last = await sync(day)
+    }
+    const weekly = () => db.events.filter(e => e.type === 'MISSION_COMPLETED' && e.day === null)
+    expect(weekly().map(e => [e.sourceId, e.amount])).toEqual([['mission:weekly_active_3', 20]])
+    expect(last.missions?.weekly?.find(m => m.id === 'weekly_active_3')).toMatchObject({ done: true, current: 3 })
+
+    const again = await sync(weekDays[2])
+    expect(weekly()).toHaveLength(1)
+    expect(again.delta).toBe(0)
+    expect(again.missions?.weekly?.find(m => m.id === 'weekly_active_3')).toMatchObject({ done: true })
+
+    for (const day of weekDays.map(d => addDays(d, 7))) {
+      completeTasks(day, 1)
+      await sync(day)
+    }
+    expect(weekly()).toHaveLength(2)
+    expect(new Set(weekly().map(e => e.idempotencyKey)).size).toBe(2)
+  })
+
+  it('ao sincronizar um dia passado, o progresso diário não é enviado', async () => {
+    const result = await sync(MONDAY, noon(addDays(MONDAY, 1)))
+    expect(result.missions).toMatchObject({ daily: null })
+    expect(result.missions?.weekly).toHaveLength(3)
+  })
+
+  it('com missões desligadas nada é enviado nem pago', async () => {
+    db.missionsEnabled = false
+    completeTasks(MONDAY, 3)
+    const result = await sync(MONDAY)
+    expect(result.missions).toBeNull()
+    expect(result.delta).toBe(30)
+  })
+})
+
+describe('personagem', () => {
+  it('a sincronização devolve o personagem com o padrão', async () => {
+    const result = await sync(MONDAY)
+    expect(result.avatar?.equipped).toEqual({ body: 'body_auto', aura: 'aura_auto', celebration: 'cel_thumbs' })
+  })
+
+  it('equipa item liberado e mantém os outros slots', async () => {
+    const state = await equipAvatarItem(db, USER, 'aura', 'aura_blue')
+    expect(state.equipped).toEqual({ body: 'body_auto', aura: 'aura_blue', celebration: 'cel_thumbs' })
+    expect(db.avatar).toEqual(state.equipped)
+    expect((await sync(MONDAY)).avatar?.equipped.aura).toBe('aura_blue')
+  })
+
+  it('recusa item que o nível não libera, de outro slot ou inexistente', async () => {
+    await expect(equipAvatarItem(db, USER, 'body', 'body_onyx')).rejects.toMatchObject({ reason: 'locked' })
+    await expect(equipAvatarItem(db, USER, 'body', 'aura_blue')).rejects.toMatchObject({ reason: 'wrong_slot' })
+    await expect(equipAvatarItem(db, USER, 'body', 'xyz')).rejects.toMatchObject({ reason: 'unknown_item' })
+    expect(db.avatar).toBeNull()
+  })
+
+  it('o nível que libera o item vem do ledger', async () => {
+    db.configOverride = { level: { coefficient: 1 } }
+    const task = db.addTask(MONDAY)
+    db.move(task, 'Concluída', `${MONDAY}T14:00:00Z`)
+    const result = await sync(MONDAY)
+    expect(result.summary.level).toBeGreaterThanOrEqual(2)
+    await expect(equipAvatarItem(db, USER, 'body', 'body_mint')).resolves.toMatchObject({ equipped: { body: 'body_mint' } })
   })
 })
 

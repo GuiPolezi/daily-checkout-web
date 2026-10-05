@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '@/src/lib/supabaseClient'
+import type { AvatarSlot, AvatarState } from '@/src/lib/gamification/avatar'
+import type { MissionProgress } from '@/src/lib/gamification/missions'
 import type { ProgressSummary, SyncResult } from '@/src/lib/gamification/types'
 
 export interface XpToast {
@@ -16,6 +18,11 @@ export interface AchievementToast {
 }
 
 export type TaskXpMap = SyncResult['taskXp']
+
+export interface MissionsState {
+  daily: MissionProgress[] | null
+  weekly: MissionProgress[] | null
+}
 
 const TOAST_DURATION_MS = 2600
 const ACHIEVEMENT_TOAST_DURATION_MS = 5000
@@ -34,6 +41,8 @@ export function useGamification() {
   const [toasts, setToasts] = useState<XpToast[]>([])
   const [achievements, setAchievements] = useState<SyncResult['achievements']>(null)
   const [achievementToasts, setAchievementToasts] = useState<AchievementToast[]>([])
+  const [missions, setMissions] = useState<MissionsState | null>(null)
+  const [avatar, setAvatar] = useState<AvatarState | null>(null)
   const [levelUp, setLevelUp] = useState<SyncResult['leveledUp']>(null)
   // Contadores que avisam o personagem para comemorar
   const [gainCount, setGainCount] = useState(0)
@@ -80,6 +89,13 @@ export function useGamification() {
       setSummary(result.summary)
       setTaskXp({ day: result.day, byTask: result.taskXp })
       setAchievements(result.achievements ?? null)
+      setAvatar(result.avatar ?? null)
+      // O progresso diário só vem quando o dia sincronizado é hoje; nos outros casos mantém o que já havia
+      setMissions(current =>
+        result.missions
+          ? { daily: result.missions.daily ?? current?.daily ?? null, weekly: result.missions.weekly ?? current?.weekly ?? null }
+          : null
+      )
 
       // Conquista nova é avisada mesmo em sincronização silenciosa: ela só acontece uma vez
       const unlocked = result.unlocked ?? []
@@ -93,9 +109,11 @@ export function useGamification() {
       }
       if (silent) return
 
-      if (result.delta !== 0) {
+      // O bônus de conquista já tem aviso próprio; o "+XP" mostra o restante
+      const xpDelta = result.delta - unlocked.reduce((sum, item) => sum + item.xpReward, 0)
+      if (xpDelta !== 0) {
         const id = ++toastId.current
-        setToasts(current => [...current, { id, amount: result.delta }])
+        setToasts(current => [...current, { id, amount: xpDelta }])
         setTimeout(() => {
           if (mounted.current) setToasts(current => current.filter(t => t.id !== id))
         }, TOAST_DURATION_MS)
@@ -119,5 +137,24 @@ export function useGamification() {
 
   const dismissLevelUp = useCallback(() => setLevelUp(null), [])
 
-  return { summary, available, notConfigured, taskXp, achievements, achievementToasts, toasts, levelUp, dismissLevelUp, gainCount, levelUpCount, sync }
+  /** Equipa um item do personagem; devolve false se o servidor recusar */
+  const equip = useCallback(async (slot: AvatarSlot, itemId: string): Promise<boolean> => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return false
+      const response = await fetch('/api/gamification/avatar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ slot, itemId }),
+      })
+      if (!response.ok) return false
+      const result = (await response.json()) as { avatar: AvatarState }
+      if (mounted.current) setAvatar(result.avatar)
+      return true
+    } catch {
+      return false
+    }
+  }, [])
+
+  return { summary, available, notConfigured, taskXp, achievements, achievementToasts, missions, avatar, equip, toasts, levelUp, dismissLevelUp, gainCount, levelUpCount, sync }
 }

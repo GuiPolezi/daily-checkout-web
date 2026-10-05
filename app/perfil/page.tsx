@@ -5,6 +5,8 @@ import Link from 'next/link'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '@/src/lib/supabaseClient'
 import TopNav from '@/app/components/TopNav'
+import AvatarPicker from '@/app/components/gamification/AvatarPicker'
+import MissionsPanel from '@/app/components/gamification/MissionsPanel'
 import ProfileCard from '@/app/components/gamification/ProfileCard'
 import XpFeedback from '@/app/components/gamification/XpFeedback'
 import { useGamification } from '@/app/components/gamification/useGamification'
@@ -32,6 +34,7 @@ const EVENT_LABEL: Record<string, string> = {
   PERFECT_DAY: 'Dia perfeito na rotina',
   STREAK_BONUS: 'Marco de sequência',
   BONUS_REVERTED: 'Bônus estornado',
+  MISSION_COMPLETED: 'Missão cumprida',
   BACKFILL: 'Tarefas concluídas antes da gamificação',
   ACHIEVEMENT: 'Conquista desbloqueada',
 }
@@ -113,6 +116,7 @@ export default function ProfilePage() {
             <div className="rise" style={{ animationDelay: '60ms' }}>
               <ProfileCard
                 summary={summary}
+                avatar={game.avatar}
                 name={session?.user?.email?.split('@')[0] ?? ''}
                 gainCount={game.gainCount}
                 levelUpCount={game.levelUpCount}
@@ -122,6 +126,15 @@ export default function ProfilePage() {
 
             {summary && (
               <>
+                {game.avatar && (
+                  <div className="rise" style={{ animationDelay: '80ms' }}>
+                    <AvatarPicker avatar={game.avatar} onEquip={game.equip} />
+                  </div>
+                )}
+
+                <div className="rise" style={{ animationDelay: '90ms' }}>
+                  <MissionsPanel missions={game.missions} defaultOpen />
+                </div>
                 {/* ─── NÚMEROS ─── */}
                 <section className="rise grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4" style={{ animationDelay: '100ms' }}>
                   {[

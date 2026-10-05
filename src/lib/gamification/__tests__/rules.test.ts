@@ -1,12 +1,16 @@
 import { describe, expect, it } from 'vitest'
+import { checkEquip, DEFAULT_EQUIPPED, resolveAvatar } from '../avatar'
 import { DEFAULT_CONFIG, mergeConfig } from '../config'
 import { addDays, isValidDay, isWorkday, localDay, weekdayName } from '../day'
 import { levelFromXp, tierForLevel, titleForLevel, totalXpForLevel, xpForLevel } from '../levels'
+import { weeklyMissionProgress, weeklyMissionStats, weekRange } from '../missions'
 import { computeStreak, streakMultiplier } from '../streak'
 import type { DaySnapshot, DayTask } from '../types'
 import { computeDesiredAwards, xpForTask } from '../xp'
 
-const config = DEFAULT_CONFIG
+// As regras de XP são testadas sem missões; as missões têm um bloco próprio mais abaixo
+const config = mergeConfig({ missions: { enabled: false } })
+const withMissions = DEFAULT_CONFIG
 const MONDAY = '2026-03-02'
 
 /** N dias úteis consecutivos a partir de uma segunda-feira */
@@ -296,6 +300,100 @@ describe('computeDesiredAwards — rotina e bônus', () => {
     const days = workdays(7)
     const fast = task({ createdAt: `${days[6]}T15:00:00Z`, completedAt: `${days[6]}T15:00:05Z` })
     expect(awardsFor(snapshot({ tasks: [fast] }), days.slice(0, 6), days[6]).some(a => a.kind === 'streak_milestone')).toBe(false)
+  })
+})
+
+describe('missões diárias', () => {
+  const at = (minute: number) => `${MONDAY}T15:${String(minute).padStart(2, '0')}:00Z`
+  const missionsOf = (snap: DaySnapshot) =>
+    awardsFor(snap, [], MONDAY, withMissions).filter(a => a.kind === 'mission').map(a => [a.sourceId, a.amount])
+
+  it('três tarefas com XP cumprem a missão', () => {
+    const tasks = [task({ completedAt: at(0) }), task({ completedAt: at(1) }), task({ completedAt: at(2) })]
+    expect(missionsOf(snapshot({ tasks }))).toEqual([['mission:daily_tasks_3', 15]])
+  })
+
+  it('tarefa sem XP não conta para a missão', () => {
+    const fast = task({ createdAt: at(5), completedAt: `${MONDAY}T15:05:10Z` })
+    const tasks = [task({ completedAt: at(0) }), task({ completedAt: at(1) }), fast]
+    expect(missionsOf(snapshot({ tasks }))).toEqual([])
+  })
+
+  it('duas rotinas com XP cumprem a missão', () => {
+    const routineTasks = [{ id: 1, dayOfWeek: 'Todos' }, { id: 2, dayOfWeek: 'Todos' }, { id: 3, dayOfWeek: 'Todos' }]
+    expect(missionsOf(snapshot({ routineTasks, completedRoutineIds: [1, 2] }))).toEqual([['mission:daily_routine_2', 10]])
+  })
+
+  it('dia redondo exige tarefa, rotina e checkout', () => {
+    const routineTasks = [{ id: 1, dayOfWeek: 'Todos' }, { id: 2, dayOfWeek: 'Todos' }]
+    const base = { tasks: [task()], routineTasks, completedRoutineIds: [1] }
+    expect(missionsOf(snapshot(base))).toEqual([])
+    expect(missionsOf(snapshot({ ...base, hasCheckout: true }))).toEqual([['mission:daily_full', 15]])
+  })
+
+  it('recompensa zerada ou missões desligadas não geram XP', () => {
+    const tasks = [task({ completedAt: at(0) }), task({ completedAt: at(1) }), task({ completedAt: at(2) })]
+    const zeroed = mergeConfig({ missions: { rewards: { daily_tasks_3: 0 } } })
+    expect(awardsFor(snapshot({ tasks }), [], MONDAY, zeroed).some(a => a.kind === 'mission')).toBe(false)
+    expect(awardsFor(snapshot({ tasks })).some(a => a.kind === 'mission')).toBe(false)
+  })
+
+  it('XP de missão não conta como atividade para marco de sequência nem checkout', () => {
+    // Só checkout, sem nada com XP: nenhuma missão e nenhum bônus
+    expect(awardsFor(snapshot({ hasCheckout: true }), [], MONDAY, withMissions)).toEqual([])
+  })
+})
+
+describe('missões semanais', () => {
+  it('a semana vai de segunda a domingo', () => {
+    expect(weekRange(MONDAY)).toEqual({ start: MONDAY, end: addDays(MONDAY, 6) })
+    expect(weekRange(addDays(MONDAY, 6))).toEqual({ start: MONDAY, end: addDays(MONDAY, 6) })
+    expect(weekRange(addDays(MONDAY, 7)).start).toBe(addDays(MONDAY, 7))
+  })
+
+  it('conta dias úteis ativos e o XP só da semana atual', () => {
+    const totals = [
+      { day: addDays(MONDAY, -3), totalXp: 500, activityXp: 500 }, // semana anterior
+      { day: MONDAY, totalXp: 40, activityXp: 10 },
+      { day: addDays(MONDAY, 1), totalXp: 20, activityXp: 0 }, // só bônus: não é dia ativo
+      { day: addDays(MONDAY, 5), totalXp: 30, activityXp: 30 }, // sábado: XP conta, dia ativo não
+      { day: null, totalXp: 999, activityXp: 0 },
+    ]
+    expect(weeklyMissionStats(totals, addDays(MONDAY, 2), withMissions)).toEqual({ activeWorkdays: 1, weekXp: 90 })
+  })
+
+  it('missão já paga continua concluída mesmo se o número cair', () => {
+    const progress = weeklyMissionProgress({ activeWorkdays: 1, weekXp: 0 }, new Set(['weekly_active_3']), withMissions)
+    expect(progress.find(m => m.id === 'weekly_active_3')).toMatchObject({ done: true, current: 3, target: 3, reward: 20 })
+    expect(progress.find(m => m.id === 'weekly_active_5')).toMatchObject({ done: false, current: 1 })
+  })
+})
+
+describe('personagem', () => {
+  it('sem nada salvo usa o padrão e marca o que o nível libera', () => {
+    const avatar = resolveAvatar(null, 1)
+    expect(avatar.equipped).toEqual(DEFAULT_EQUIPPED)
+    expect(avatar.items.find(i => i.id === 'body_sky')?.unlocked).toBe(true)
+    expect(avatar.items.find(i => i.id === 'body_onyx')?.unlocked).toBe(false)
+  })
+
+  it('item salvo que o nível não libera volta para o padrão', () => {
+    const saved = { body: 'body_onyx', aura: 'aura_blue', celebration: 'não existe' }
+    expect(resolveAvatar(saved, 1).equipped).toEqual({ body: 'body_auto', aura: 'aura_blue', celebration: 'cel_thumbs' })
+    expect(resolveAvatar(saved, 12).equipped.body).toBe('body_onyx')
+  })
+
+  it('ignora dado salvo com formato inesperado', () => {
+    expect(resolveAvatar('lixo', 5).equipped).toEqual(DEFAULT_EQUIPPED)
+    expect(resolveAvatar({ body: 42, aura: ['aura_blue'] }, 5).equipped).toEqual(DEFAULT_EQUIPPED)
+  })
+
+  it('checkEquip recusa item desconhecido, de outro slot ou bloqueado', () => {
+    expect(checkEquip('body', 'body_sky', 1)).toBeNull()
+    expect(checkEquip('body', 'nada', 50)).toBe('unknown_item')
+    expect(checkEquip('body', 'aura_blue', 50)).toBe('wrong_slot')
+    expect(checkEquip('body', 'body_onyx', 11)).toBe('locked')
+    expect(checkEquip('body', 'body_onyx', 12)).toBeNull()
   })
 })
 

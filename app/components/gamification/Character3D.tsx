@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
-import { lookForTier, type TierLook } from './tiers'
+import type { CharacterLook, TierLook } from './tiers'
 
 // Modelo "RobotExpressive" — Tomás Laulhé (Quaternius), CC0 1.0. Ver public/models/LICENSE.md
 const MODEL_URL = '/models/RobotExpressive.glb'
@@ -12,7 +12,7 @@ const FRAME_MS = 1000 / 30
 const MODEL_HEIGHT = 2
 
 interface Props {
-  tier: number
+  look: CharacterLook
   /** Muda a cada ganho de XP → o personagem comemora */
   gainCount: number
   /** Muda a cada subida de nível → o personagem acena */
@@ -28,10 +28,10 @@ interface SceneApi {
   setLook: (look: TierLook) => void
 }
 
-export default function Character3D({ tier, gainCount, levelUpCount, onReady, onError }: Props) {
+export default function Character3D({ look, gainCount, levelUpCount, onReady, onError }: Props) {
   const hostRef = useRef<HTMLDivElement>(null)
   const apiRef = useRef<SceneApi | null>(null)
-  const tierRef = useRef(tier)
+  const lookRef = useRef(look)
   const onReadyRef = useRef(onReady)
   const onErrorRef = useRef(onError)
 
@@ -87,7 +87,7 @@ export default function Character3D({ tier, gainCount, levelUpCount, onReady, on
       pedestalMaterial.color.set(look.aura)
       tinted.forEach(material => material.color.set(look.body))
     }
-    applyLook(lookForTier(tierRef.current))
+    applyLook(lookRef.current)
 
     let mixer: THREE.AnimationMixer | null = null
     const actions = new Map<string, THREE.AnimationAction>()
@@ -126,7 +126,7 @@ export default function Character3D({ tier, gainCount, levelUpCount, onReady, on
             }
           })
         })
-        applyLook(lookForTier(tierRef.current))
+        applyLook(lookRef.current)
         pivot.add(model)
 
         mixer = new THREE.AnimationMixer(model)
@@ -225,12 +225,12 @@ export default function Character3D({ tier, gainCount, levelUpCount, onReady, on
   }, [])
 
   useEffect(() => {
-    tierRef.current = tier
-    apiRef.current?.setLook(lookForTier(tier))
-  }, [tier])
+    lookRef.current = look
+    apiRef.current?.setLook(look)
+  }, [look])
 
   useEffect(() => {
-    if (gainCount > 0) apiRef.current?.play('ThumbsUp')
+    if (gainCount > 0) apiRef.current?.play(lookRef.current.celebration)
   }, [gainCount])
 
   useEffect(() => {

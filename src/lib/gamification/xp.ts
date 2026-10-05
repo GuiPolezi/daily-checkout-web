@@ -3,6 +3,7 @@
 
 import type { GamificationConfig } from './config'
 import { EVERY_DAY, isWorkday, localDay, weekdayName } from './day'
+import { dailyMissionAwards, dailyMissionStats } from './missions'
 import { computeStreak, streakMultiplier } from './streak'
 import type { Award, DaySnapshot, DayTask } from './types'
 
@@ -166,6 +167,9 @@ export function computeDesiredAwards({ day, snapshot, activeDaysBefore, config }
       })
     }
   }
+
+  // Missões diárias: contam só o que rendeu XP de tarefa/rotina, e são estornadas junto se isso for desfeito
+  awards.push(...dailyMissionAwards(dailyMissionStats(awards, snapshot.hasCheckout), config))
 
   return awards
 }

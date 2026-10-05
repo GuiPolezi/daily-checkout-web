@@ -131,19 +131,41 @@ export function createSupabaseRepo(client: SupabaseClient = getServiceClient()):
     },
 
     async unlockAchievements(userId, achievements) {
-      if (achievements.length === 0) return
+      if (achievements.length === 0) return []
       // O catálogo vive no código; a tabela é espelhada sob demanda por causa da chave estrangeira
       const catalog = await client.from('achievements').upsert(
         achievements.map(item => ({ id: item.id, title: item.title, description: item.description, xp_reward: item.xpReward }))
       )
       unwrap({ data: null, error: catalog.error })
-      const unlocked = await client
-        .from('user_achievements')
-        .upsert(
-          achievements.map(item => ({ user_id: userId, achievement_id: item.id })),
-          { onConflict: 'user_id,achievement_id', ignoreDuplicates: true }
-        )
-      unwrap({ data: null, error: unlocked.error })
+      // Com ignoreDuplicates o retorno traz só as linhas inseridas agora (não as que já existiam)
+      const inserted = unwrap(
+        await client
+          .from('user_achievements')
+          .upsert(
+            achievements.map(item => ({ user_id: userId, achievement_id: item.id })),
+            { onConflict: 'user_id,achievement_id', ignoreDuplicates: true }
+          )
+          .select('achievement_id')
+      )
+      return inserted.map(row => row.achievement_id)
+    },
+
+    async loadExistingKeys(keys) {
+      if (keys.length === 0) return []
+      const rows = unwrap(await client.from('xp_events').select('idempotency_key').in('idempotency_key', keys))
+      return rows.map(row => row.idempotency_key)
+    },
+
+    async loadAvatar(userId) {
+      const rows = unwrap(await client.from('user_avatar').select('equipped').eq('user_id', userId).limit(1))
+      return rows[0]?.equipped ?? null
+    },
+
+    async saveAvatar(userId, equipped) {
+      const { error } = await client
+        .from('user_avatar')
+        .upsert({ user_id: userId, equipped, updated_at: new Date().toISOString() })
+      unwrap({ data: null, error })
     },
 
     async saveProgress(userId, progress) {

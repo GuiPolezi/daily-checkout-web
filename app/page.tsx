@@ -5,6 +5,7 @@ import { supabase } from '@/src/lib/supabaseClient'
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
 import TopNav from '@/app/components/TopNav'
 import ThemeToggle from '@/app/components/ThemeToggle'
+import MissionsPanel from '@/app/components/gamification/MissionsPanel'
 import ProfileCard from '@/app/components/gamification/ProfileCard'
 import XpFeedback from '@/app/components/gamification/XpFeedback'
 import { useGamification } from '@/app/components/gamification/useGamification'
@@ -338,13 +339,15 @@ export default function Home() {
 
         {/* ─── PERFIL DE JOGADOR ─── */}
         {game.available && (
-          <div className="rise mb-6" style={{ animationDelay: '40ms' }}>
+          <div className="rise mb-6 space-y-3" style={{ animationDelay: '40ms' }}>
             <ProfileCard
               summary={game.summary}
+              avatar={game.avatar}
               name={session.user.email?.split('@')[0] ?? ''}
               gainCount={game.gainCount}
               levelUpCount={game.levelUpCount}
             />
+            <MissionsPanel missions={game.missions} />
           </div>
         )}
 

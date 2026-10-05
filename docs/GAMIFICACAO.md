@@ -107,7 +107,11 @@ Metas semanais que valem para a equipe inteira, mostradas junto das missões. **
 
 - O painel mostra só o total da equipe e quantas pessoas contribuíram. Não há ranking nem lista por pessoa.
 - **O progresso só aparece quando pelo menos 3 pessoas contribuíram na semana.** Com menos gente, o total da equipe menos o seu próprio número revelaria o de um colega; nesse caso o painel mostra apenas se a meta foi batida ou não.
-- Mesmo com 3 ou mais pessoas, o total é da equipe e quem acompanha de perto consegue perceber quando ele sobe. Não é um dado mais sensível do que o que as telas Equipe e Histórico já mostram, mas vale saber.
+- **Limites dessa proteção, para ficar claro:**
+  - Com exatamente 3 pessoas contribuindo, o total mostrado é exato: quem contribuiu consegue calcular a soma das outras duas (não o número de cada uma). Se isso for sensível para a equipe, aumente `team.minContributorsToShow`.
+  - Mesmo com o progresso oculto, o painel mostra quando a meta passa de "não batida" para "batida". Numa equipe de duas pessoas, isso indica que a outra teve atividade na semana.
+  - Quem acompanha o painel de perto percebe quando o total sobe.
+  - Nada disso é mais detalhado do que o que as telas Equipe e Histórico já mostram por pessoa, mas a meta da equipe não deve ser lida como "anônima" em equipes muito pequenas.
 - Quando a meta é batida, quem teve pelo menos uma tarefa ou rotina com XP na semana recebe a recompensa, uma vez, **na próxima vez que abrir o sistema naquela mesma semana (até domingo)**. Quem não abrir o sistema depois que a meta foi batida não recebe a daquela semana.
 - Quem não contribuiu vê a meta, mas não recebe.
 

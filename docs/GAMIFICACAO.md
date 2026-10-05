@@ -96,7 +96,9 @@ Objetivos curtos que dão um XP extra. **As recompensas atuais são provisórias
 - Missão **semanal** é paga uma vez por semana e não é retirada depois.
 - O XP de missão não conta como "dia ativo" para a sequência — a sequência depende de tarefa ou rotina de verdade.
 
-### Metas da equipe
+### Metas da equipe (desligadas)
+
+> **Estado atual: desligadas.** O sistema tem hoje um único usuário ativo, então o foco é o uso individual. O código das metas de equipe está pronto e testado, mas não aparece na tela. Para ligar: `update gamification_config set params = jsonb_set(params, '{team,enabled}', 'true'::jsonb, true) where id = 1;` (esse comando muda só essa chave e preserva o resto da configuração)
 
 Metas semanais que valem para a equipe inteira, mostradas junto das missões. **Alvos e recompensas são provisórios.**
 
@@ -121,7 +123,7 @@ Em **Meu Perfil** dá para escolher a cor do personagem, a cor da aura e a comem
 
 ### Onde ver
 
-- **Meu Dia**: card com o personagem, nível, título, barra de XP, sequência, escudos e XP de hoje, e o painel de missões e metas da equipe (recolhido por padrão).
+- **Meu Dia**: card com o personagem, nível, título, barra de XP, sequência, escudos e XP de hoje, e o painel de missões (recolhido por padrão; inclui as metas da equipe quando elas estão ligadas).
 - **Meu Perfil**: totais, recorde de sequência, personalização do personagem, missões, conquistas, tabela dos próximos níveis e o histórico de cada lançamento de XP.
 
 ### Limitações conhecidas (para gestores)
@@ -188,7 +190,7 @@ Como não há duplicidade: a chave de cada lançamento é `usuário:dia:origem:s
 2. Rode `supabase/migrations/002_fechar_leitura_sem_login.sql`. É uma correção de segurança independente da gamificação (a gamificação funciona sem ela): impede que relatórios, perfis e estatísticas sejam lidos sem login. Nenhuma tela do sistema lê essas tabelas sem sessão, e o arquivo traz o comando para desfazer.
 3. Na **Vercel** (Settings → Environment Variables) e no `.env.local`, adicione `SUPABASE_SERVICE_ROLE_KEY` com a chave *service_role* do projeto (Supabase → Settings → API). Essa chave nunca deve receber o prefixo `NEXT_PUBLIC_`.
 4. Rode `supabase/migrations/003_conquistas.sql` para ligar as conquistas. Sem ela, XP, níveis e sequência funcionam normalmente e a seção de conquistas simplesmente não aparece.
-5. Opcional: rode `supabase/migrations/005_indice_metas_equipe.sql`, um índice que mantém rápida a leitura das metas da equipe quando o histórico crescer.
+5. Opcional: rode `supabase/migrations/005_indice_metas_equipe.sql`, um índice que mantém rápida a leitura das metas da equipe quando o histórico crescer. Só importa com as metas de equipe ligadas.
 6. Opcional: rode `supabase/migrations/004_personagem_equip.sql`. A personalização do personagem funciona sem ela; a migration só impede que duas trocas feitas ao mesmo tempo (duas abas) se sobrescrevam.
 7. Faça o deploy.
 
@@ -249,4 +251,6 @@ npm run build
 ### Próximas fases
 
 - **Fase 2 (em andamento)**: conquistas, missões (com recompensas provisórias) e um conjunto padrão de personalização já entregues; faltam os valores definitivos das missões e os itens personalizados do personagem.
-- **Fase 3 (em andamento)**: metas cooperativas da equipe já entregues, com valores provisórios; falta o painel do gestor, que depende de definir quem é gestor e o que ele pode ver.
+- **Fase 3 (em análise, sem desenvolvimento por enquanto)**: o foco atual é o uso individual.
+  - Metas cooperativas da equipe: implementadas e desligadas (ver "Metas da equipe"). Religar quando houver mais pessoas usando; antes disso, calibrar alvos e recompensas pelo tamanho real da equipe.
+  - Painel do gestor: não iniciado. O gestor é o dono do sistema (hoje, o único usuário). Quando fizer sentido, definir o que o painel mostra — a recomendação é só números agregados, sem ranking por pessoa, para não virar avaliação de desempenho — e como identificar o gestor (ex.: lista de e-mails na configuração).

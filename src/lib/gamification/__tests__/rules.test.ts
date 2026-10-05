@@ -409,6 +409,13 @@ describe('personagem', () => {
 })
 
 describe('mergeConfig', () => {
+  it('metas de equipe vêm desligadas e podem ser ligadas pela configuração', () => {
+    expect(DEFAULT_CONFIG.team.enabled).toBe(false)
+    const cfg = mergeConfig({ team: { enabled: true } })
+    expect(cfg.team.enabled).toBe(true)
+    expect(cfg.team.goals).toEqual(DEFAULT_CONFIG.team.goals)
+  })
+
   it('sem sobrescrita devolve o padrão', () => {
     expect(mergeConfig(null)).toEqual(DEFAULT_CONFIG)
     expect(mergeConfig('lixo')).toEqual(DEFAULT_CONFIG)

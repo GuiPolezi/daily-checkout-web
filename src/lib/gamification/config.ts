@@ -135,7 +135,9 @@ export const DEFAULT_CONFIG: GamificationConfig = {
     },
   },
   team: {
-    enabled: true,
+    // Desligado: hoje o sistema tem uso individual. O código das metas de equipe fica pronto
+    // e volta com {"team": {"enabled": true}} em gamification_config.
+    enabled: false,
     minContributorsToShow: 3,
     // Valores provisórios, como os das missões; ajustar ao tamanho real da equipe
     goals: {

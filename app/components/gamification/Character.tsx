@@ -36,6 +36,9 @@ function canUse3D(): boolean {
   }
 }
 
+// Duração do fade do 2D para o 3D (igual ao duration-500 usado abaixo)
+const FADE_MS = 500
+
 export default function Character({ tier, avatar, gainCount, levelUpCount }: Props) {
   const equipped = avatar?.equipped
   // Objeto estável: o 3D só reaplica as cores quando algo muda de fato
@@ -46,6 +49,17 @@ export default function Character({ tier, avatar, gainCount, levelUpCount }: Pro
   )
   const [mode, setMode] = useState<'2d' | '3d'>('2d')
   const [ready, setReady] = useState(false)
+  // O 2D sai do DOM depois do fade: assim ele nunca fica visível por trás do 3D (o canvas é transparente)
+  const [show2D, setShow2D] = useState(true)
+
+  useEffect(() => {
+    if (!ready) {
+      setShow2D(true)
+      return
+    }
+    const timer = setTimeout(() => setShow2D(false), FADE_MS + 50)
+    return () => clearTimeout(timer)
+  }, [ready])
 
   useEffect(() => {
     if (!canUse3D()) return
@@ -62,9 +76,11 @@ export default function Character({ tier, avatar, gainCount, levelUpCount }: Pro
   return (
     <div className="relative h-full w-full">
       {/* O 2D fica à mostra até o modelo 3D terminar de carregar */}
-      <div className={`h-full w-full transition-opacity duration-500 ${ready ? 'opacity-0' : 'opacity-100'}`}>
-        <Character2D look={look} />
-      </div>
+      {show2D && (
+        <div className={`h-full w-full transition-opacity duration-500 ${ready ? 'opacity-0' : 'opacity-100'}`}>
+          <Character2D look={look} />
+        </div>
+      )}
       {mode === '3d' && (
         <div className="absolute inset-0">
           <Character3D

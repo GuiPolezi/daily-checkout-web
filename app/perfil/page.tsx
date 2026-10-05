@@ -121,7 +121,6 @@ export default function ProfilePage() {
                 name={session?.user?.email?.split('@')[0] ?? ''}
                 gainCount={game.gainCount}
                 levelUpCount={game.levelUpCount}
-                hideProfileLink
               />
             </div>
 

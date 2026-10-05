@@ -5,6 +5,7 @@ import { supabase } from '@/src/lib/supabaseClient'
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
 import TopNav from '@/app/components/TopNav'
 import ThemeToggle from '@/app/components/ThemeToggle'
+import ViewTabs, { type ViewTab } from '@/app/components/ViewTabs'
 import MissionsPanel from '@/app/components/gamification/MissionsPanel'
 import ProfileCard from '@/app/components/gamification/ProfileCard'
 import XpFeedback from '@/app/components/gamification/XpFeedback'
@@ -50,6 +51,13 @@ const XP_REASON_LABEL: Partial<Record<AwardReason, string>> = {
   daily_cap: 'Teto diário de XP atingido',
 }
 
+type HomeView = 'tasks' | 'missions'
+
+const HOME_VIEWS: ViewTab<HomeView>[] = [
+  { id: 'tasks', label: 'Tarefas' },
+  { id: 'missions', label: 'Missões' },
+]
+
 const COLUMN_CONFIG = {
   'A Fazer':      { accent: 'var(--ios-gray)' },
   'Em Andamento': { accent: 'var(--ios-blue)' },
@@ -66,7 +74,10 @@ export default function Home() {
   const [loading, setLoading] = useState(false)
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null)
   const [selectedDate, setSelectedDate] = useState(() => todayLocal())
+  const [view, setView] = useState<HomeView>('tasks')
   const game = useGamification()
+  // Sem gamificação não existe a guia de missões: o conteúdo de tarefas fica sempre à mostra
+  const activeView: HomeView = game.available ? view : 'tasks'
   const syncXp = game.sync
   const userId = session?.user?.id
 
@@ -275,19 +286,49 @@ export default function Home() {
       <div className="w-full px-4 sm:px-6 lg:px-10">
 
         {/* ─── HERO / DATA ─── */}
-        <section className="rise pt-8 pb-6 sm:pt-10">
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-            <div className="min-w-0">
-              <p className="eyebrow mb-2">
-                {isToday ? 'Hoje' : 'Navegando por'}
-              </p>
-              <h2 className="text-3xl font-semibold capitalize leading-tight tracking-tight text-ink sm:text-[2.75rem] sm:leading-none">
-                {formatDate(selectedDate)}
-              </h2>
-            </div>
+        <section
+          className={`rise grid grid-cols-1 gap-6 pt-8 pb-8 sm:pt-10 lg:items-center lg:gap-10 ${
+            game.available ? 'lg:grid-cols-[minmax(0,1fr)_minmax(0,33rem)]' : ''
+          }`}
+        >
+          <div className="min-w-0">
+            <p className="eyebrow mb-2">
+              {isToday ? 'Hoje' : 'Navegando por'}
+            </p>
+            <h2 className="text-3xl font-semibold capitalize leading-tight tracking-tight text-ink sm:text-4xl xl:text-[2.75rem] xl:leading-[1.08]">
+              {formatDate(selectedDate)}
+            </h2>
+
+            <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-5">
+              {/* Progresso do dia */}
+              <div className="min-w-0 flex-1">
+                <div
+                  className="h-2 overflow-hidden rounded-full bg-fill-2"
+                  role="progressbar"
+                  aria-label="Tarefas concluídas no dia"
+                  aria-valuemin={0}
+                  aria-valuemax={Math.max(totalCount, 1)}
+                  aria-valuenow={completedCount}
+                >
+                  <div
+                    className="h-full rounded-full bg-linear-to-r from-accent to-aero transition-[width] duration-700 ease-out"
+                    style={{ width: `${totalCount > 0 ? (completedCount / totalCount) * 100 : 0}%` }}
+                  />
+                </div>
+                <p className="mt-2 text-[13px] text-ink-2">
+                  {totalCount > 0 ? (
+                    <>
+                      <span className="font-semibold text-ink">{completedCount}</span> de{' '}
+                      <span className="font-semibold text-ink">{totalCount}</span> concluídas
+                    </>
+                  ) : (
+                    'Nenhuma tarefa neste dia ainda'
+                  )}
+                </p>
+              </div>
 
             {/* Navegação de data */}
-            <div className="glass flex h-12 items-center gap-1 self-start rounded-full px-1.5 sm:self-auto">
+            <div className="glass flex h-12 shrink-0 items-center gap-1 self-start rounded-full px-1.5 sm:self-auto">
               <button
                 onClick={() => { const d = new Date(selectedDate); d.setDate(d.getDate() - 1); setSelectedDate(d.toISOString().split('T')[0]) }}
                 className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink-2 transition-all hover:bg-fill hover:text-ink active:scale-90"
@@ -318,28 +359,11 @@ export default function Home() {
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 5l7 7-7 7"/></svg>
               </button>
             </div>
+            </div>
           </div>
 
-          {/* Progresso */}
-          {totalCount > 0 && (
-            <div className="mt-7 flex items-center gap-4">
-              <div className="h-2 flex-1 overflow-hidden rounded-full bg-fill">
-                <div
-                  className="h-full rounded-full bg-linear-to-r from-accent to-aero transition-all duration-700"
-                  style={{ width: `${(completedCount / totalCount) * 100}%` }}
-                />
-              </div>
-              <p className="shrink-0 text-[13px] text-ink-2">
-                <span className="font-semibold text-ink">{completedCount}</span> de{' '}
-                <span className="font-semibold text-ink">{totalCount}</span> concluídas
-              </p>
-            </div>
-          )}
-        </section>
-
-        {/* ─── PERFIL DE JOGADOR ─── */}
-        {game.available && (
-          <div className="rise mb-6 space-y-3" style={{ animationDelay: '40ms' }}>
+          {/* Perfil de jogador */}
+          {game.available && (
             <ProfileCard
               summary={game.summary}
               avatar={game.avatar}
@@ -347,12 +371,48 @@ export default function Home() {
               gainCount={game.gainCount}
               levelUpCount={game.levelUpCount}
             />
-            <MissionsPanel missions={game.missions} team={game.team} />
-          </div>
-        )}
+          )}
+        </section>
+
+        {/* ─── GUIAS: TAREFAS / MISSÕES ─── */}
+        <div className="rise mb-5 px-1" style={{ animationDelay: '60ms' }}>
+          <ViewTabs
+            tabs={game.available ? HOME_VIEWS : HOME_VIEWS.slice(0, 1)}
+            active={activeView}
+            onChange={setView}
+            idPrefix="home"
+            label="Conteúdo do dia"
+          />
+        </div>
+
+        {/* As duas guias ficam montadas; só a ativa aparece (a animação de entrada roda a cada troca) */}
+        <div
+          role="tabpanel"
+          id="home-panel-missions"
+          aria-labelledby={game.available ? 'home-tab-missions' : undefined}
+          hidden={activeView !== 'missions'}
+          className="tab-panel"
+        >
+          <MissionsPanel missions={game.missions} team={game.team} collapsible={false} />
+          {!game.missions?.daily?.length && !game.missions?.weekly?.length && !game.team?.length && (
+            <div className="glass rounded-[1.75rem] px-6 py-14 text-center">
+              <p className="text-sm text-ink-2">
+                {game.summary ? 'Nenhuma missão disponível no momento.' : 'Carregando missões...'}
+              </p>
+            </div>
+          )}
+        </div>
+
+        <div
+          role="tabpanel"
+          id="home-panel-tasks"
+          aria-labelledby="home-tab-tasks"
+          hidden={activeView !== 'tasks'}
+          className="tab-panel"
+        >
 
         {/* ─── INPUT ─── */}
-        <section className="rise mb-8" style={{ animationDelay: '60ms' }}>
+        <section className="mb-8">
           <div className={`glass flex flex-col gap-1 rounded-[1.75rem] p-2.5 transition-all duration-200 sm:flex-row sm:items-center ${
             editingTaskId
               ? 'ring-4 ring-warn/25'
@@ -528,7 +588,7 @@ export default function Home() {
         </DragDropContext>
 
         {/* ─── CHECKOUT ─── */}
-        <section className="glass rise flex flex-col items-start justify-between gap-5 rounded-[1.75rem] p-6 sm:flex-row sm:items-center sm:p-8">
+        <section className="glass flex flex-col items-start justify-between gap-5 rounded-[1.75rem] p-6 sm:flex-row sm:items-center sm:p-8">
           <div>
             <p className="text-[15px] font-semibold text-ink">Finalizar o dia</p>
             <p className="mt-1 text-[13px] text-ink-2">Envie um relatório com o resumo das atividades de hoje.</p>
@@ -553,6 +613,7 @@ export default function Home() {
           </button>
         </section>
 
+        </div>
       </div>
 
       <XpFeedback toasts={game.toasts} achievementToasts={game.achievementToasts} levelUp={game.levelUp} onDismissLevelUp={game.dismissLevelUp} />

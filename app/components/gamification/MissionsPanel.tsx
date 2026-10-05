@@ -8,8 +8,10 @@ interface Props {
   missions: MissionsState | null
   /** Metas cooperativas da semana */
   team?: TeamGoalProgress[] | null
-  /** Na home o painel começa fechado para não empurrar o kanban; no perfil, aberto */
+  /** No modo recolhível, se o painel já começa aberto */
   defaultOpen?: boolean
+  /** false = conteúdo sempre à mostra, sem cabeçalho de recolher (usado dentro de uma guia) */
+  collapsible?: boolean
 }
 
 // Missões e metas da equipe são exibidas da mesma forma
@@ -80,7 +82,7 @@ function teamNote(team: TeamGoalProgress[]): string {
   return `${contributors} pessoas contribuíram nesta semana. ${call}`
 }
 
-export default function MissionsPanel({ missions, team, defaultOpen = false }: Props) {
+export default function MissionsPanel({ missions, team, defaultOpen = false, collapsible = true }: Props) {
   const daily = missions?.daily ?? []
   const weekly = missions?.weekly ?? []
   const goals = team ?? []
@@ -90,6 +92,26 @@ export default function MissionsPanel({ missions, team, defaultOpen = false }: P
   // Meta da equipe só conta como "sua" se você contribuiu (é quem recebe a recompensa)
   const doneCount =
     [...daily, ...weekly].filter(mission => mission.done).length + goals.filter(goal => goal.done && goal.contributed).length
+
+  const groups = (
+    <>
+      {daily.length > 0 && <MissionGroup label="Hoje" missions={daily} />}
+      {weekly.length > 0 && <MissionGroup label="Esta semana" missions={weekly} />}
+      {goals.length > 0 && <MissionGroup label="Equipe · esta semana" missions={goals} note={teamNote(goals)} />}
+    </>
+  )
+
+  if (!collapsible) {
+    return (
+      <section className="glass rounded-[1.75rem] p-5 sm:p-6" aria-label="Missões">
+        <div className="mb-5 flex items-center justify-between gap-3">
+          <p className="text-[13px] text-ink-2">Objetivos curtos que rendem XP extra.</p>
+          <span className="chip chip-accent shrink-0 tabular-nums">{doneCount} de {all.length} concluídas</span>
+        </div>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">{groups}</div>
+      </section>
+    )
+  }
 
   return (
     <details className="glass group rounded-[1.75rem]" open={defaultOpen}>
@@ -106,11 +128,7 @@ export default function MissionsPanel({ missions, team, defaultOpen = false }: P
         </span>
       </summary>
 
-      <div className="grid grid-cols-1 gap-5 px-5 pb-5 lg:grid-cols-2">
-        {daily.length > 0 && <MissionGroup label="Hoje" missions={daily} />}
-        {weekly.length > 0 && <MissionGroup label="Esta semana" missions={weekly} />}
-        {goals.length > 0 && <MissionGroup label="Equipe · esta semana" missions={goals} note={teamNote(goals)} />}
-      </div>
+      <div className="grid grid-cols-1 gap-5 px-5 pb-5 lg:grid-cols-2">{groups}</div>
     </details>
   )
 }

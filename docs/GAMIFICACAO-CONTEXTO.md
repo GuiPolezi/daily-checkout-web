@@ -8,7 +8,7 @@ Arquivo de retomada. Registra onde o trabalho parou em **2026-10-05**, as decis�
 
 ## 1. Onde paramos
 
-- **Branch:** `feature/gamificacao`, 8 commits sobre `main` (`68be36a`). O push e a publicação são feitos pelo dono do projeto.
+- **Branch:** `feature/gamificacao`, criada a partir de `main` (`68be36a`). O push e a publicação são feitos pelo dono do projeto.
 - **Produção (Vercel):** ainda na versão antiga até a branch ser publicada.
 - **Banco (Supabase):** migrations `001`, `002` e `003` aplicadas. `004` e `005` são opcionais e não há confirmação de que foram rodadas. O ledger (`xp_events`) estava **vazio** na última conferência — ninguém ganhou XP ainda.
 - **Vercel / `.env.local`:** `SUPABASE_SERVICE_ROLE_KEY` cadastrada.
@@ -24,7 +24,7 @@ Arquivo de retomada. Registra onde o trabalho parou em **2026-10-05**, as decis�
 | `fa63985` | Documentação: limites de privacidade das metas de equipe |
 | `449666c` | Metas de equipe desligadas por padrão (foco individual) |
 
-O arquivo `prompt-gamificacao-daily-checkout.md` (o pedido original) está na raiz, fora dos commits.
+O arquivo `prompt-gamificacao-daily-checkout.md` (o pedido original) está na raiz, commitado à parte (`5ad3e21`).
 
 ---
 

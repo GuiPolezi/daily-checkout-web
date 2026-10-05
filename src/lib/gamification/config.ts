@@ -78,7 +78,8 @@ export const DEFAULT_CONFIG: GamificationConfig = {
     priorityMultipliers: { Normal: 1, Moderado: 1, Urgente: 1 },
     dailyCap: 100,
     routineDailyCap: 80,
-    minSecondsToComplete: 60,
+    // Desligada por decisão da equipe: muita gente lança no fim do dia o que já fez
+    minSecondsToComplete: 0,
     dedupeTitles: true,
   },
   streak: {

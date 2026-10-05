@@ -177,15 +177,20 @@ describe('computeDesiredAwards — tarefas avulsas', () => {
     expect(award.metadata).toMatchObject({ streakDays: 5, raw: 11 })
   })
 
-  it('concluída em menos de N segundos não gera XP', () => {
-    const t = task({ createdAt: `${MONDAY}T15:00:00Z`, completedAt: `${MONDAY}T15:00:30Z` })
-    expect(awardsFor(snapshot({ tasks: [t] }))).toMatchObject([{ amount: 0, reason: 'too_fast' }])
+  it('por padrão, tarefa criada e concluída na hora vale XP', () => {
+    expect(DEFAULT_CONFIG.task.minSecondsToComplete).toBe(0)
+    const t = task({ createdAt: `${MONDAY}T15:00:00Z`, completedAt: `${MONDAY}T15:00:01Z` })
+    expect(awardsFor(snapshot({ tasks: [t] }))).toMatchObject([{ amount: 10, reason: 'ok' }])
   })
 
-  it('a regra dos N segundos pode ser desligada na configuração', () => {
-    const cfg = mergeConfig({ task: { minSecondsToComplete: 0 } })
-    const t = task({ createdAt: `${MONDAY}T15:00:00Z`, completedAt: `${MONDAY}T15:00:01Z` })
-    expect(awardsFor(snapshot({ tasks: [t] }), [], MONDAY, cfg)).toMatchObject([{ amount: 10, reason: 'ok' }])
+  it('a regra do tempo mínimo pode ser ligada na configuração', () => {
+    const cfg = mergeConfig({ task: { minSecondsToComplete: 60 } })
+    const fast = task({ createdAt: `${MONDAY}T15:00:00Z`, completedAt: `${MONDAY}T15:00:30Z` })
+    const slow = task({ createdAt: `${MONDAY}T15:00:00Z`, completedAt: `${MONDAY}T15:01:00Z` })
+    expect(awardsFor(snapshot({ tasks: [fast, slow] }), [], MONDAY, cfg)).toMatchObject([
+      { amount: 0, reason: 'too_fast' },
+      { amount: 10, reason: 'ok' },
+    ])
   })
 
   it('título repetido no dia vale XP só uma vez', () => {
@@ -277,8 +282,9 @@ describe('computeDesiredAwards — rotina e bônus', () => {
   })
 
   it('checkout não vale bônus se nada do dia rendeu XP', () => {
-    const fast = task({ createdAt: `${MONDAY}T15:00:00Z`, completedAt: `${MONDAY}T15:00:05Z` })
-    expect(awardsFor(snapshot({ hasCheckout: true, tasks: [fast] })).some(a => a.kind === 'checkout')).toBe(false)
+    // Tarefa de ontem concluída hoje: está "Concluída", mas não rende XP
+    const late = task({ completedAt: `${addDays(MONDAY, 1)}T15:00:00Z` })
+    expect(awardsFor(snapshot({ hasCheckout: true, tasks: [late] })).some(a => a.kind === 'checkout')).toBe(false)
   })
 
   it('checkout vale bônus só com algo concluído', () => {
@@ -298,8 +304,8 @@ describe('computeDesiredAwards — rotina e bônus', () => {
 
   it('dia sem XP de atividade não dispara marco', () => {
     const days = workdays(7)
-    const fast = task({ createdAt: `${days[6]}T15:00:00Z`, completedAt: `${days[6]}T15:00:05Z` })
-    expect(awardsFor(snapshot({ tasks: [fast] }), days.slice(0, 6), days[6]).some(a => a.kind === 'streak_milestone')).toBe(false)
+    const unpaid = task({ createdAt: `${days[6]}T12:00:00Z`, completedAt: null })
+    expect(awardsFor(snapshot({ tasks: [unpaid] }), days.slice(0, 6), days[6]).some(a => a.kind === 'streak_milestone')).toBe(false)
   })
 })
 
@@ -314,8 +320,8 @@ describe('missões diárias', () => {
   })
 
   it('tarefa sem XP não conta para a missão', () => {
-    const fast = task({ createdAt: at(5), completedAt: `${MONDAY}T15:05:10Z` })
-    const tasks = [task({ completedAt: at(0) }), task({ completedAt: at(1) }), fast]
+    const duplicate = task({ title: 'Repetida', completedAt: at(3) })
+    const tasks = [task({ title: 'Repetida', completedAt: at(0) }), task({ completedAt: at(1) }), duplicate]
     expect(missionsOf(snapshot({ tasks }))).toEqual([])
   })
 

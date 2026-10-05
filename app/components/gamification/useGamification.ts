@@ -110,7 +110,7 @@ export function useGamification() {
       if (silent) return
 
       // O bônus de conquista já tem aviso próprio; o "+XP" mostra o restante
-      const xpDelta = result.delta - unlocked.reduce((sum, item) => sum + item.xpReward, 0)
+      const xpDelta = result.delta - (result.achievementXp ?? 0)
       if (xpDelta !== 0) {
         const id = ++toastId.current
         setToasts(current => [...current, { id, amount: xpDelta }])

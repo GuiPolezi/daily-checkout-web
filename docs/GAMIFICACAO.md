@@ -24,7 +24,6 @@ Quem está em sequência ganha um pouco mais por tarefa: +2% por dia de sequênc
 
 O card da tarefa mostra o motivo. As regras existem para que o XP reflita trabalho real:
 
-- **Concluída rápido demais** — tarefa criada e concluída em menos de 1 minuto. Se você costuma lançar no fim do dia o que já fez, a tarefa aparece no checkout normalmente, só não rende XP. (Este tempo é ajustável; veja a parte técnica.)
 - **Título repetido no dia** — duas tarefas com o mesmo título no mesmo dia rendem XP uma vez só.
 - **Concluída fora do dia** — tarefa de ontem concluída hoje não rende XP.
 - **Teto diário** — tarefas avulsas rendem no máximo 100 XP por dia. A rotina tem um teto próprio de 80 XP por dia. Os bônus não entram em teto.
@@ -169,7 +168,8 @@ Como não há duplicidade: a chave de cada lançamento é `usuário:dia:origem:s
 2. Rode `supabase/migrations/002_fechar_leitura_sem_login.sql`. É uma correção de segurança independente da gamificação (a gamificação funciona sem ela): impede que relatórios, perfis e estatísticas sejam lidos sem login. Nenhuma tela do sistema lê essas tabelas sem sessão, e o arquivo traz o comando para desfazer.
 3. Na **Vercel** (Settings → Environment Variables) e no `.env.local`, adicione `SUPABASE_SERVICE_ROLE_KEY` com a chave *service_role* do projeto (Supabase → Settings → API). Essa chave nunca deve receber o prefixo `NEXT_PUBLIC_`.
 4. Rode `supabase/migrations/003_conquistas.sql` para ligar as conquistas. Sem ela, XP, níveis e sequência funcionam normalmente e a seção de conquistas simplesmente não aparece.
-5. Faça o deploy.
+5. Opcional: rode `supabase/migrations/004_personagem_equip.sql`. A personalização do personagem funciona sem ela; a migration só impede que duas trocas feitas ao mesmo tempo (duas abas) se sobrescrevam.
+6. Faça o deploy.
 
 Enquanto os passos 1 e 3 não forem feitos, a rota responde 503 e as telas simplesmente não mostram o card — o restante do sistema funciona como antes.
 
@@ -178,9 +178,9 @@ Enquanto os passos 1 e 3 não forem feitos, a rota responde 503 e as telas simpl
 Edite o JSON da linha única de `gamification_config`. Só é preciso informar o que muda; o resto continua com o padrão de `config.ts`. Valores com formato inválido são ignorados.
 
 ```sql
--- Desligar a regra do "rápido demais" e aumentar o bônus do checkout
+-- Aumentar o bônus do checkout e exigir 60 s entre criar e concluir uma tarefa
 update gamification_config
-set params = '{"task": {"minSecondsToComplete": 0}, "bonus": {"dailyCheckout": 25}}',
+set params = '{"task": {"minSecondsToComplete": 60}, "bonus": {"dailyCheckout": 25}}',
     updated_at = now()
 where id = 1;
 ```
@@ -188,6 +188,8 @@ where id = 1;
 Parâmetros disponíveis: `timeZone`, `workdays`, `task` (`baseXp`, `routineBaseXp`, `priorityMultipliers`, `dailyCap`, `routineDailyCap`, `minSecondsToComplete`, `dedupeTitles`), `streak` (`multiplierPerDay`, `multiplierMax`, `shieldEvery`, `maxShields`, `milestones`, `milestoneBonus`), `bonus` (`dailyCheckout`, `perfectDay`), `level` (`coefficient`, `exponent`, `maxLevel`), `titles`, `achievements.enabled`, `missions` (`enabled` e `rewards` por missão) e `backfill.xpPerTask`.
 
 Atenção: mudar a curva (`level`) muda o nível de todos imediatamente, porque o nível é derivado do XP. Mudar valores de XP vale para o dia de hoje em diante; dias já lançados só são recalculados se forem sincronizados de novo.
+
+Existe uma regra opcional de tempo mínimo (`task.minSecondsToComplete`): com ela ligada, tarefa criada e concluída em menos de N segundos não rende XP. Ela vem **desligada** (valor 0), porque a equipe costuma lançar no fim do dia o que já fez. O teto diário e a regra de título repetido continuam limitando o abuso.
 
 ### Como recalcular o progresso
 

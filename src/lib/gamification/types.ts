@@ -115,6 +115,8 @@ export interface SyncResult {
   taskXp: Record<string, { amount: number; reason: AwardReason }>
   /** Conquistas desbloqueadas nesta sincronização */
   unlocked: { id: string; title: string; description: string; xpReward: number }[]
+  /** XP de conquista lançado de fato nesta sincronização (já incluído em `delta`) */
+  achievementXp: number
   /** Catálogo com o progresso do usuário; null quando as conquistas não estão disponíveis */
   achievements: AchievementProgress[] | null
   /** Missões; null quando desligadas. `daily` só vem quando o dia sincronizado é hoje */

@@ -69,8 +69,9 @@ class FakeDb implements GamificationRepo {
     return this.avatar
   }
 
-  async saveAvatar(_userId: string, equipped: Record<string, string>) {
-    this.avatar = equipped
+  // Como a função do banco: altera só o slot informado
+  async saveAvatarSlot(_userId: string, slot: string, itemId: string) {
+    this.avatar = { ...((this.avatar ?? {}) as Record<string, string>), [slot]: itemId }
   }
 
   async loadDay(userId: string, day: string) {
@@ -352,6 +353,7 @@ describe('syncDay — conquistas', () => {
 
     const first = await sync(MONDAY)
     expect(first.unlocked.map(a => a.id)).toEqual(['tasks_1'])
+    expect(first.achievementXp).toBe(10)
     expect(first.delta).toBe(10 + 10)
     expect(first.summary.totalXp).toBe(20)
     expect(first.achievements?.find(a => a.id === 'tasks_1')).toMatchObject({ current: 1, target: 1 })
@@ -400,9 +402,15 @@ describe('syncDay — conquistas', () => {
     expect(failed.events).toMatchObject([{ type: 'TASK_COMPLETED', amount: 10 }])
     expect(failed.achievements).toBeNull()
     expect(failed.unlocked).toEqual([])
-    expect(db.progress).not.toBeNull()
+    // O XP da conquista chegou a ser lançado antes da falha: o total já o inclui e não fica defasado
+    expect(failed.summary.totalXp).toBe(20)
+    expect(failed.delta).toBe(20)
+    expect(db.progress?.totalXp).toBe(20)
 
     const retry = await sync(MONDAY)
+    // A nova tentativa avisa a conquista, mas não informa XP novo: o cliente não mostra "-10 XP"
+    expect(retry.delta).toBe(0)
+    expect(retry.achievementXp).toBe(0)
     expect(retry.unlocked.map(a => a.id)).toEqual(['tasks_1'])
     expect(db.events.filter(e => e.type === 'ACHIEVEMENT')).toHaveLength(1)
     expect(retry.summary.totalXp).toBe(20)
@@ -540,8 +548,16 @@ describe('personagem', () => {
   it('equipa item liberado e mantém os outros slots', async () => {
     const state = await equipAvatarItem(db, USER, 'aura', 'aura_blue')
     expect(state.equipped).toEqual({ body: 'body_auto', aura: 'aura_blue', celebration: 'cel_thumbs' })
-    expect(db.avatar).toEqual(state.equipped)
+    expect(db.avatar).toEqual({ aura: 'aura_blue' })
     expect((await sync(MONDAY)).avatar?.equipped.aura).toBe('aura_blue')
+  })
+
+  it('trocas simultâneas em slots diferentes não se sobrescrevem', async () => {
+    await Promise.all([
+      equipAvatarItem(db, USER, 'aura', 'aura_blue'),
+      equipAvatarItem(db, USER, 'body', 'body_sky'),
+    ])
+    expect((await sync(MONDAY)).avatar?.equipped).toEqual({ body: 'body_sky', aura: 'aura_blue', celebration: 'cel_thumbs' })
   })
 
   it('recusa item que o nível não libera, de outro slot ou inexistente', async () => {

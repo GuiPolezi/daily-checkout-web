@@ -32,6 +32,9 @@ export function getServiceClient(): SupabaseClient {
 // PostgREST devolve estes códigos quando a tabela/view ainda não existe (migration não aplicada)
 const MISSING_RELATION_CODES = new Set(['42P01', 'PGRST205', 'PGRST204', '42703'])
 
+// PostgREST: função não encontrada no schema
+const FUNCTION_NOT_FOUND = 'PGRST202'
+
 const isMissingRelation = (error: { code?: string } | null) =>
   Boolean(error?.code && MISSING_RELATION_CODES.has(error.code))
 
@@ -161,10 +164,16 @@ export function createSupabaseRepo(client: SupabaseClient = getServiceClient()):
       return rows[0]?.equipped ?? null
     },
 
-    async saveAvatar(userId, equipped) {
+    async saveAvatarSlot(userId, slot, itemId, merged) {
+      // Troca atômica de um slot (migration 004): duas trocas simultâneas não se sobrescrevem
+      const atomic = await client.rpc('gamification_equip_avatar', { p_user_id: userId, p_slot: slot, p_item: itemId })
+      if (!atomic.error) return
+      if (atomic.error.code !== FUNCTION_NOT_FOUND) unwrap({ data: null, error: atomic.error })
+
+      // Sem a função no banco, grava o estado completo (a última troca vence)
       const { error } = await client
         .from('user_avatar')
-        .upsert({ user_id: userId, equipped, updated_at: new Date().toISOString() })
+        .upsert({ user_id: userId, equipped: merged, updated_at: new Date().toISOString() })
       unwrap({ data: null, error })
     },
 

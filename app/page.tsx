@@ -5,6 +5,11 @@ import { supabase } from '@/src/lib/supabaseClient'
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
 import TopNav from '@/app/components/TopNav'
 import ThemeToggle from '@/app/components/ThemeToggle'
+import ProfileCard from '@/app/components/gamification/ProfileCard'
+import XpFeedback from '@/app/components/gamification/XpFeedback'
+import { useGamification } from '@/app/components/gamification/useGamification'
+import { todayLocal } from '@/src/lib/gamification/day'
+import type { AwardReason } from '@/src/lib/gamification/types'
 
 interface Task {
   id: number;
@@ -36,6 +41,14 @@ const PRIORITY_CONFIG = {
   Normal:   { dot: 'var(--ios-green)',  chip: 'chip-success', label: 'Normal'   },
 }
 
+// Por que uma tarefa concluída não rendeu XP (ou rendeu menos)
+const XP_REASON_LABEL: Partial<Record<AwardReason, string>> = {
+  too_fast: 'Sem XP · concluída rápido demais',
+  duplicate: 'Sem XP · título repetido no dia',
+  outside_day: 'Sem XP · concluída fora do dia',
+  daily_cap: 'Teto diário de XP atingido',
+}
+
 const COLUMN_CONFIG = {
   'A Fazer':      { accent: 'var(--ios-gray)' },
   'Em Andamento': { accent: 'var(--ios-blue)' },
@@ -51,7 +64,10 @@ export default function Home() {
   const [priority, setPriority] = useState<Task['priority']>('Normal')
   const [loading, setLoading] = useState(false)
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null)
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
+  const [selectedDate, setSelectedDate] = useState(() => todayLocal())
+  const game = useGamification()
+  const syncXp = game.sync
+  const userId = session?.user?.id
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -67,6 +83,11 @@ export default function Home() {
 
     return () => subscription.unsubscribe()
   }, [selectedDate])
+
+  // Ao abrir um dia, busca o progresso e o XP das tarefas (sem aviso de "+XP")
+  useEffect(() => {
+    if (userId) syncXp(selectedDate, { silent: true })
+  }, [userId, selectedDate, syncXp])
 
   async function fetchTasks(userId: string, date: string) {
     const { data } = await supabase
@@ -92,6 +113,7 @@ export default function Home() {
         setTasks(tasks.map(t => t.id === editingTaskId ? { ...t, title: newTask, priority } : t))
         setEditingTaskId(null)
         setNewTask('')
+        syncXp(selectedDate)
       }
     } else {
       // Nova tarefa entra no topo da coluna "A Fazer"
@@ -115,12 +137,16 @@ export default function Home() {
     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus, position } : t))
     const { error } = await supabase.from('tasks').update({ status: newStatus, position }).eq('id', taskId)
     if (error) { alert('Erro ao mover tarefa'); fetchTasks(session.user.id, selectedDate) }
+    else if (destination.droppableId !== source.droppableId) syncXp(selectedDate)
   }
 
   const deleteTask = async (id: number) => {
     if (!confirm('Deseja excluir esta atividade?')) return
     const { error } = await supabase.from('tasks').delete().eq('id', id)
-    if (!error) setTasks(tasks.filter(t => t.id !== id))
+    if (!error) {
+      setTasks(tasks.filter(t => t.id !== id))
+      syncXp(selectedDate)
+    }
   }
 
   const startEdit = (task: Task) => {
@@ -138,7 +164,7 @@ export default function Home() {
       tasks: tasks.map(t => ({ title: t.title, prio: t.priority, status: t.status, done: t.status === 'Concluída' }))
     }
     const { error } = await supabase.from('reports').insert([{ user_id: session.user.id, user_email: session.user.email, summary }])
-    if (!error) alert('Checkout enviado com sucesso!')
+    if (!error) { alert('Checkout enviado com sucesso!'); syncXp(selectedDate) }
     else alert('Erro ao enviar relatório.')
     setLoading(false)
   }
@@ -148,7 +174,8 @@ export default function Home() {
     return d.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })
   }
 
-  const isToday = selectedDate === new Date().toISOString().split('T')[0]
+  const isToday = selectedDate === todayLocal()
+  const taskXp = game.taskXp?.day === selectedDate ? game.taskXp.byTask : {}
   const completedCount = tasks.filter(t => t.status === 'Concluída').length
   const totalCount = tasks.length
 
@@ -309,6 +336,18 @@ export default function Home() {
           )}
         </section>
 
+        {/* ─── PERFIL DE JOGADOR ─── */}
+        {game.available && (
+          <div className="rise mb-6" style={{ animationDelay: '40ms' }}>
+            <ProfileCard
+              summary={game.summary}
+              name={session.user.email?.split('@')[0] ?? ''}
+              gainCount={game.gainCount}
+              levelUpCount={game.levelUpCount}
+            />
+          </div>
+        )}
+
         {/* ─── INPUT ─── */}
         <section className="rise mb-8" style={{ animationDelay: '60ms' }}>
           <div className={`glass flex flex-col gap-1 rounded-[1.75rem] p-2.5 transition-all duration-200 sm:flex-row sm:items-center ${
@@ -399,6 +438,7 @@ export default function Home() {
                       >
                         {colTasks.map((task, index) => {
                           const pCfg = PRIORITY_CONFIG[task.priority]
+                          const xp = taskXp[task.id]
                           return (
                             <Draggable key={task.id} draggableId={task.id.toString()} index={index}>
                               {(provided, snapshot) => (
@@ -448,9 +488,17 @@ export default function Home() {
                                   <div className="mt-3 flex items-center justify-between gap-2 border-t border-separator-soft pt-2.5">
                                     <span className={`chip ${pCfg.chip}`}>{pCfg.label}</span>
                                     {task.status === 'Concluída' && (
-                                      <span className="flex items-center gap-1.5 text-xs font-medium text-success">
-                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
-                                        Concluída
+                                      <span className="flex min-w-0 items-center gap-2">
+                                        {xp && xp.amount > 0 && (
+                                          <span className="chip chip-accent tabular-nums" title={XP_REASON_LABEL[xp.reason]}>+{xp.amount} XP</span>
+                                        )}
+                                        {xp && xp.amount === 0 && XP_REASON_LABEL[xp.reason] && (
+                                          <span className="truncate text-[11px] text-ink-3">{XP_REASON_LABEL[xp.reason]}</span>
+                                        )}
+                                        <span className="flex shrink-0 items-center gap-1.5 text-xs font-medium text-success">
+                                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                                          Concluída
+                                        </span>
                                       </span>
                                     )}
                                   </div>
@@ -503,6 +551,8 @@ export default function Home() {
         </section>
 
       </div>
+
+      <XpFeedback toasts={game.toasts} levelUp={game.levelUp} onDismissLevelUp={game.dismissLevelUp} />
     </main>
   )
 }

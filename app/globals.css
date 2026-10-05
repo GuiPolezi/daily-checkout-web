@@ -519,3 +519,86 @@ html[data-theme="dark"] body::before {
     animation: none;
   }
 }
+
+/* ── Gamificação ─────────────────────────────────────── */
+
+/* Aviso de "+XP": sobe, fica um instante e some */
+@keyframes xp-toast {
+  0% {
+    opacity: 0;
+    transform: translateY(14px) scale(0.92);
+  }
+  12%,
+  78% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.98);
+  }
+}
+.xp-toast {
+  animation: xp-toast 2.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Confete discreto da subida de nível */
+@keyframes confetti-fall {
+  0% {
+    opacity: 0;
+    transform: translateY(-12px) rotate(0deg);
+  }
+  15% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(260px) rotate(300deg);
+  }
+}
+.confetti-piece {
+  position: absolute;
+  top: 0;
+  width: 7px;
+  height: 11px;
+  border-radius: 2px;
+  opacity: 0;
+  animation: confetti-fall 1.9s ease-in forwards;
+}
+
+/* Personagem 2D: flutua de leve */
+@keyframes mascot-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+@keyframes mascot-sparkle {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.mascot-float {
+  animation: mascot-float 3.2s ease-in-out infinite;
+}
+.mascot-sparkle {
+  animation: mascot-sparkle 2.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .xp-toast,
+  .mascot-float,
+  .mascot-sparkle {
+    animation: none;
+  }
+  .confetti-piece {
+    display: none;
+  }
+}

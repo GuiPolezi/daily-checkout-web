@@ -2,6 +2,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/src/lib/supabaseClient'
 import TopNav from '@/app/components/TopNav'
+import XpFeedback from '@/app/components/gamification/XpFeedback'
+import { useGamification } from '@/app/components/gamification/useGamification'
+import { todayLocal } from '@/src/lib/gamification/day'
 
 const DAYS = ['Todos', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo']
 const DAY_NAMES = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
@@ -22,7 +25,7 @@ export default function SupportPage() {
   const [clockDate, setClockDate] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const todayStr = new Date().toISOString().split('T')[0]
+  const game = useGamification()
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -54,7 +57,7 @@ export default function SupportPage() {
     const { data: doneToday } = await supabase
       .from('team_task_completions')
       .select('*')
-      .eq('completion_date', todayStr)
+      .eq('completion_date', todayLocal())
 
     if (tasks) setTeamTasks(tasks)
     if (doneToday) setCompletions(doneToday)
@@ -63,6 +66,8 @@ export default function SupportPage() {
 
   const toggleCheck = async (taskId: number) => {
     if (!session) return
+    // Lido na hora da ação: a página pode ter ficado aberta de um dia para o outro
+    const todayStr = todayLocal()
     const existing = completions.find(
       c => c.team_task_id === taskId && c.user_id === session.user.id
     )
@@ -77,6 +82,7 @@ export default function SupportPage() {
       }])
     }
     fetchData()
+    game.sync(todayStr)
   }
 
   const completeDay = async () => {
@@ -86,6 +92,7 @@ export default function SupportPage() {
         !completions.some(c => c.team_task_id === t.id && c.user_id === session.user.id)
     )
     if (targets.length === 0) return
+    const todayStr = todayLocal()
 
     setBulkBusy(true)
     await supabase.from('team_task_completions').insert(
@@ -98,6 +105,7 @@ export default function SupportPage() {
     )
     await fetchData()
     setBulkBusy(false)
+    game.sync(todayStr)
   }
 
   const addTask = async () => {
@@ -371,6 +379,8 @@ export default function SupportPage() {
           </section>
         </div>
       </div>
+
+      <XpFeedback toasts={game.toasts} levelUp={game.levelUp} onDismissLevelUp={game.dismissLevelUp} />
     </main>
   )
 }

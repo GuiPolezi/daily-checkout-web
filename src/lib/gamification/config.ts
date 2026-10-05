@@ -1,0 +1,151 @@
+// Fonte única dos parâmetros da gamificação.
+// Estes são os valores padrão; a linha de `gamification_config` no banco pode sobrescrever
+// qualquer um deles (mesmo formato, em JSON) sem precisar de novo deploy.
+
+export type Priority = 'Urgente' | 'Moderado' | 'Normal'
+
+export interface LevelTitle {
+  minLevel: number
+  title: string
+}
+
+export interface GamificationConfig {
+  version: number
+  /** Fuso que define a virada do dia (sequência, "hoje", teto diário) */
+  timeZone: string
+  /** Dias que contam para a sequência (0 = domingo … 6 = sábado) */
+  workdays: number[]
+  task: {
+    baseXp: number
+    routineBaseXp: number
+    priorityMultipliers: Record<Priority, number>
+    /** Teto diário de XP vindo de tarefas avulsas (rotina e bônus ficam fora) */
+    dailyCap: number
+    /** Teto diário de XP vindo de tarefas de rotina (qualquer pessoa pode criar rotinas) */
+    routineDailyCap: number
+    /** Tarefa concluída antes disso, contado da criação, não gera XP (0 desliga a regra) */
+    minSecondsToComplete: number
+    /** Títulos repetidos no mesmo dia geram XP só uma vez */
+    dedupeTitles: boolean
+  }
+  streak: {
+    multiplierPerDay: number
+    multiplierMax: number
+    /** A cada quantos dias de sequência o usuário ganha um escudo */
+    shieldEvery: number
+    maxShields: number
+    milestones: number[]
+    milestoneBonus: number
+  }
+  bonus: {
+    dailyCheckout: number
+    perfectDay: number
+  }
+  level: {
+    coefficient: number
+    exponent: number
+    maxLevel: number
+  }
+  titles: LevelTitle[]
+  backfill: {
+    xpPerTask: number
+  }
+}
+
+export const DEFAULT_CONFIG: GamificationConfig = {
+  version: 1,
+  timeZone: 'America/Sao_Paulo',
+  workdays: [1, 2, 3, 4, 5],
+  task: {
+    baseXp: 10,
+    routineBaseXp: 8,
+    // A prioridade é escolhida pelo próprio usuário; multiplicar por ela premiaria marcar tudo como urgente
+    priorityMultipliers: { Normal: 1, Moderado: 1, Urgente: 1 },
+    dailyCap: 100,
+    routineDailyCap: 80,
+    minSecondsToComplete: 60,
+    dedupeTitles: true,
+  },
+  streak: {
+    multiplierPerDay: 0.02,
+    multiplierMax: 1.3,
+    shieldEvery: 7,
+    maxShields: 2,
+    milestones: [7, 30, 100],
+    milestoneBonus: 50,
+  },
+  bonus: {
+    dailyCheckout: 20,
+    perfectDay: 30,
+  },
+  level: {
+    coefficient: 60,
+    exponent: 1.5,
+    maxLevel: 200,
+  },
+  titles: [
+    { minLevel: 1, title: 'Aprendiz de Essências' },
+    { minLevel: 5, title: 'Perfumista Júnior' },
+    { minLevel: 10, title: 'Perfumista' },
+    { minLevel: 20, title: 'Mestre Perfumista' },
+    { minLevel: 35, title: 'Nariz Lendário' },
+  ],
+  backfill: {
+    xpPerTask: 10,
+  },
+}
+
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+
+// Aceita a sobrescrita só quando ela tem o mesmo formato do valor padrão;
+// qualquer coisa fora do formato é ignorada e o padrão permanece.
+function mergeValue(base: unknown, override: unknown): unknown {
+  if (override === undefined || override === null) return base
+  if (Array.isArray(base)) {
+    if (!Array.isArray(override) || override.length === 0) return base
+    const sample = base[0]
+    const sameShape = override.every(item =>
+      isPlainObject(sample)
+        ? isPlainObject(item) && Object.keys(sample).every(k => typeof item[k] === typeof sample[k])
+        : typeof item === typeof sample && (typeof item !== 'number' || Number.isFinite(item))
+    )
+    return sameShape ? override : base
+  }
+  if (isPlainObject(base)) {
+    if (!isPlainObject(override)) return base
+    return Object.fromEntries(
+      Object.entries(base).map(([key, value]) => [key, mergeValue(value, override[key])])
+    )
+  }
+  if (typeof base === 'number') {
+    return typeof override === 'number' && Number.isFinite(override) && override >= 0 ? override : base
+  }
+  return typeof override === typeof base ? override : base
+}
+
+function isValidTimeZone(timeZone: string): boolean {
+  try {
+    new Intl.DateTimeFormat('en-CA', { timeZone })
+    return true
+  } catch {
+    return false
+  }
+}
+
+export function mergeConfig(override: unknown): GamificationConfig {
+  const merged = mergeValue(DEFAULT_CONFIG, override) as GamificationConfig
+  const safe: GamificationConfig = {
+    ...merged,
+    timeZone: isValidTimeZone(merged.timeZone) ? merged.timeZone : DEFAULT_CONFIG.timeZone,
+    level: {
+      ...merged.level,
+      // Coeficiente zerado ou expoente < 1 fariam o nível disparar; mantém o padrão nesses casos
+      coefficient: merged.level.coefficient >= 1 ? merged.level.coefficient : DEFAULT_CONFIG.level.coefficient,
+      exponent: merged.level.exponent >= 1 ? merged.level.exponent : DEFAULT_CONFIG.level.exponent,
+      maxLevel: merged.level.maxLevel >= 1 ? Math.floor(merged.level.maxLevel) : DEFAULT_CONFIG.level.maxLevel,
+    },
+    titles: [...merged.titles].sort((a, b) => a.minLevel - b.minLevel),
+  }
+  return safe
+}

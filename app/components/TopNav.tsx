@@ -11,6 +11,7 @@ const LINKS = [
   { href: '/suporte', label: 'Rotina' },
   { href: '/admin', label: 'Histórico' },
   { href: '/usuarios', label: 'Equipe' },
+  { href: '/perfil', label: 'Meu Perfil' },
 ]
 
 export default function TopNav() {

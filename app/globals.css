@@ -697,7 +697,7 @@ html[data-theme="dark"] body::before {
   }
 }
 .mascot-float {
-  animation: mascot-float 3.2s ease-in-out infinite;
+  animation: mascot-float 3.8s ease-in-out infinite;
 }
 .mascot-sparkle {
   animation: mascot-sparkle 2.4s ease-in-out infinite;

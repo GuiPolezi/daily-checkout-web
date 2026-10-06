@@ -11,6 +11,8 @@ const FRAME_MS = 1000 / 30
 const MODEL_HEIGHT = 2
 /** Duração do giro de 360° usado pelas comemorações marcadas em `spinOn` do rig */
 const SPIN_MS = 900
+// Repouso um pouco mais calmo que o clipe original; comemorações tocam na velocidade normal
+const IDLE_SPEED = 0.85
 
 interface Props {
   /** Personagem escolhido; trocar o id carrega outro modelo no mesmo palco */
@@ -125,6 +127,7 @@ export default function Character3D({ character, look, gainCount, levelUpCount, 
       const next = actions.get(name)
       if (!next || next === current) return
       next.reset()
+      next.setEffectiveTimeScale(once ? 1 : IDLE_SPEED)
       if (once) next.setLoop(repetitions > 1 ? THREE.LoopRepeat : THREE.LoopOnce, repetitions)
       else next.setLoop(THREE.LoopRepeat, Infinity)
       next.clampWhenFinished = once

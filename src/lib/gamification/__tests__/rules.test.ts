@@ -66,17 +66,17 @@ describe('day', () => {
 
 describe('levels', () => {
   it('xpForLevel segue round(coef × L^exp)', () => {
-    expect(xpForLevel(1, config.level)).toBe(60)
-    expect(xpForLevel(2, config.level)).toBe(170)
-    expect(xpForLevel(4, config.level)).toBe(480)
+    expect(xpForLevel(1, config.level)).toBe(150)
+    expect(xpForLevel(2, config.level)).toBe(227)
+    expect(xpForLevel(4, config.level)).toBe(345)
   })
 
   it('levelFromXp devolve nível e progresso dentro do nível', () => {
-    expect(levelFromXp(0, config.level)).toMatchObject({ level: 1, xpIntoLevel: 0, xpForNext: 60 })
-    expect(levelFromXp(59, config.level)).toMatchObject({ level: 1, xpIntoLevel: 59 })
-    expect(levelFromXp(60, config.level)).toMatchObject({ level: 2, xpIntoLevel: 0, xpForNext: 170 })
-    expect(levelFromXp(1022, config.level).level).toBe(5)
-    expect(levelFromXp(1021, config.level).level).toBe(4)
+    expect(levelFromXp(0, config.level)).toMatchObject({ level: 1, xpIntoLevel: 0, xpForNext: 150 })
+    expect(levelFromXp(149, config.level)).toMatchObject({ level: 1, xpIntoLevel: 149 })
+    expect(levelFromXp(150, config.level)).toMatchObject({ level: 2, xpIntoLevel: 0, xpForNext: 227 })
+    expect(levelFromXp(1012, config.level).level).toBe(5)
+    expect(levelFromXp(1011, config.level).level).toBe(4)
   })
 
   it('levelFromXp e totalXpForLevel são inversas', () => {
@@ -430,14 +430,14 @@ describe('mergeConfig', () => {
   it('sobrescreve só o que foi informado', () => {
     const cfg = mergeConfig({ bonus: { dailyCheckout: 25 }, level: { coefficient: 100 } })
     expect(cfg.bonus).toEqual({ dailyCheckout: 25, perfectDay: 30 })
-    expect(cfg.level).toEqual({ coefficient: 100, exponent: 1.5, maxLevel: 200 })
+    expect(cfg.level).toEqual({ coefficient: 100, exponent: 0.6, maxLevel: 200 })
     expect(cfg.task).toEqual(DEFAULT_CONFIG.task)
   })
 
   it('ignora valores com formato errado', () => {
     const cfg = mergeConfig({
       bonus: { dailyCheckout: '25', perfectDay: -5 },
-      level: { coefficient: 0, exponent: 0.2 },
+      level: { coefficient: 0, exponent: -1 },
       timeZone: 'Marte/Olympus',
       workdays: ['seg'],
       titles: [{ nome: 'x' }],

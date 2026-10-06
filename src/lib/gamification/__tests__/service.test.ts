@@ -441,8 +441,8 @@ describe('syncDay — conquistas', () => {
   })
 
   it('o bônus de uma conquista que sobe o nível libera a conquista de nível na mesma sincronização', async () => {
-    // Com coeficiente 1 o nível 5 pede 17 XP: os 10 da tarefa não bastam, os 10 da conquista completam
-    db.configOverride = { level: { coefficient: 1 } }
+    // Com coeficiente 2 o nível 5 pede 14 XP: os 10 da tarefa não bastam, os 10 da conquista completam
+    db.configOverride = { level: { coefficient: 2 } }
     const task = db.addTask(MONDAY)
     db.move(task, 'Concluída', `${MONDAY}T14:00:00Z`)
     const result = await sync(MONDAY)

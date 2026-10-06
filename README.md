@@ -75,15 +75,21 @@ Todo XP soma no seu total, e o total define o nível. O começo é rápido; os n
 
 | Nível | XP para o próximo | XP acumulado para chegar |
 |:---:|:---:|:---:|
-| 1 | 60 | 0 |
-| 2 | 170 | 60 |
-| 3 | 312 | 230 |
-| 4 | 480 | 542 |
-| 5 | 671 | 1.022 |
-| 10 | 1.897 | 6.664 |
-| 20 | 5.367 | 40.282 |
+| 1 | 150 | 0 |
+| 2 | 227 | 150 |
+| 3 | 290 | 377 |
+| 4 | 345 | 667 |
+| 5 | 394 | 1.012 |
+| 10 | 597 | 3.411 |
+| 20 | 905 | 10.839 |
+| 35 | 1.266 | 27.042 |
+| 50 | 1.568 | 48.205 |
+| 70 | 1.919 | 82.988 |
+| 100 | 2.377 | 147.370 |
 
-No ritmo de umas 80 XP por dia útil: **nível 5** em 2 a 3 semanas, **nível 10** em cerca de 4 meses, **nível 20** em cerca de 2 anos.
+No ritmo de umas 80 XP por dia útil: **Prata** em 3 semanas, **Ouro** em 2 meses, **Platina** em 6 meses, **Esmeralda** em pouco mais de 1 ano, **Diamante** em 2 anos e meio, **Mestre** em 4 anos e **Grão-Mestre** em 7. Missões, checkout e conquistas aceleram esse ritmo.
+
+> **Por que esses prazos?** A curva segue o que a pesquisa sobre hábitos mostra. O estudo de Lally (2010) mediu uma mediana de **66 dias** para um comportamento virar automático, com pessoas entre 18 e 254 dias. Uma meta-análise de 2024 (Singh e colegas) apontou de **2 a 5 meses**, com indivíduos entre 4 e 335 dias. Prata chega perto dos 18 dias, Ouro dos 66, Platina passa dos 5 meses e Esmeralda ultrapassa o maior tempo já observado: quem chega ali consolidou o hábito por qualquer medida. Os três títulos finais são de longo prazo, como os ranques do xadrez. As fontes estão no [guia da gamificação](./docs/GAMIFICACAO.md#por-que-a-curva-é-assim).
 
 A cada faixa de nível você ganha um título novo e o personagem muda de cor:
 
@@ -135,30 +141,35 @@ A semana vai de segunda a domingo. As recompensas atuais são provisórias e ain
 Medalhas **permanentes** por marcos de uso — uma vez desbloqueada, a conquista nunca é retirada.
 
 <details>
-<summary><b>Ver as 18 conquistas</b></summary>
+<summary><b>Ver as 21 conquistas</b></summary>
 
 <br>
 
+O tema é a forja: a tarefa é a martelada, a rotina é o fogo que não apaga, o checkout é o selo do ourives e a sequência é a chama.
+
 | Conquista | Como desbloquear | Bônus |
 |---|---|:---:|
-| Primeira Nota | Concluir a primeira tarefa | +10 XP |
-| Mãos de Alquimista | Concluir 50 tarefas | +50 XP |
-| Coleção Assinada | Concluir 250 tarefas | +100 XP |
-| Obra-Prima | Concluir 1.000 tarefas | +200 XP |
-| Ritual em Dia | Marcar 25 tarefas de rotina | +30 XP |
-| Guardião da Rotina | Marcar 200 tarefas de rotina | +100 XP |
-| Primeiro Fechamento | Enviar o primeiro checkout | +10 XP |
-| Diário de Bordo | Enviar o checkout em 20 dias | +50 XP |
-| Memória Olfativa | Enviar o checkout em 100 dias | +150 XP |
-| Dia Perfeito | Completar toda a rotina de um dia | +10 XP |
-| Semana Perfeita | Completar toda a rotina em 5 dias | +40 XP |
-| Harmonia Completa | Completar toda a rotina em 25 dias | +100 XP |
-| Fixação | 7 dias úteis de sequência | — |
-| Longa Duração | 30 dias úteis de sequência | — |
-| Essência Eterna | 100 dias úteis de sequência | — |
-| Jaleco Novo | Chegar ao nível 5 | — |
-| Bancada Própria | Chegar ao nível 10 | — |
-| Casa de Perfumes | Chegar ao nível 20 | — |
+| Primeira Faísca | Concluir a primeira tarefa | +10 XP |
+| Mãos na Bigorna | Concluir 50 tarefas | +50 XP |
+| Liga Temperada | Concluir 250 tarefas | +100 XP |
+| Mil Marteladas | Concluir 1.000 tarefas | +200 XP |
+| Ritmo da Forja | Marcar 25 tarefas de rotina | +30 XP |
+| Guardião do Fogo | Marcar 200 tarefas de rotina | +100 XP |
+| Primeiro Selo | Enviar o primeiro checkout | +10 XP |
+| Livro da Oficina | Enviar o checkout em 20 dias | +50 XP |
+| Marca Registrada | Enviar o checkout em 100 dias | +150 XP |
+| Molde Perfeito | Completar toda a rotina de um dia | +10 XP |
+| Semana Sem Rebarba | Completar toda a rotina em 5 dias | +40 XP |
+| Peça de Mestre | Completar toda a rotina em 25 dias | +100 XP |
+| Fogo Aceso | 7 dias úteis de sequência | — |
+| Brasa Constante | 30 dias úteis de sequência | — |
+| Hábito Forjado | 45 dias úteis de sequência (cerca de 66 dias corridos, a mediana para um hábito virar automático) | — |
+| Chama Eterna | 100 dias úteis de sequência | — |
+| Prata Polida | Chegar ao nível 5 | — |
+| Ouro Puro | Chegar ao nível 10 | — |
+| Platina Forjada | Chegar ao nível 20 | — |
+| Esmeralda Lapidada | Chegar ao nível 35 | — |
+| Diamante Bruto | Chegar ao nível 50 | — |
 
 As de sequência e de nível são só reconhecimento: a sequência já paga bônus nos marcos e o nível é consequência do XP.
 

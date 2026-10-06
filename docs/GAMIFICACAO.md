@@ -36,19 +36,23 @@ Rotina, checkout e dia perfeito só rendem XP **no próprio dia**. Marcar uma ro
 
 ### Níveis e títulos
 
-O XP necessário para subir cresce aos poucos: o começo é rápido e os níveis altos pedem mais constância.
+O XP de cada nível cresce devagar (150 no primeiro, 597 no décimo, 2.377 no centésimo): subir de nível continua acontecendo a cada poucas semanas mesmo para quem já está alto.
 
 | Nível | XP para o próximo nível | XP acumulado para chegar |
 |---|---|---|
-| 1 | 60 | 0 |
-| 2 | 170 | 60 |
-| 3 | 312 | 230 |
-| 4 | 480 | 542 |
-| 5 | 671 | 1.022 |
-| 10 | 1.897 | 6.664 |
-| 20 | 5.367 | 40.282 |
+| 1 | 150 | 0 |
+| 2 | 227 | 150 |
+| 3 | 290 | 377 |
+| 4 | 345 | 667 |
+| 5 | 394 | 1.012 |
+| 10 | 597 | 3.411 |
+| 20 | 905 | 10.839 |
+| 35 | 1.266 | 27.042 |
+| 50 | 1.568 | 48.205 |
+| 70 | 1.919 | 82.988 |
+| 100 | 2.377 | 147.370 |
 
-Com um ritmo de cerca de 80 XP por dia útil: nível 5 em umas 2 a 3 semanas, nível 10 em cerca de 4 meses, nível 20 em cerca de 2 anos.
+Com um ritmo de cerca de 80 XP por dia útil (só tarefas e rotina): Prata em 3 semanas, Ouro em 2 meses, Platina em 6 meses, Esmeralda em pouco mais de 1 ano, Diamante em 2 anos e meio, Mestre em 4 anos e Grão-Mestre em 7. Missões, checkout e conquistas aceleram esse ritmo.
 
 | Níveis | Título |
 |---|---|
@@ -63,6 +67,29 @@ Com um ritmo de cerca de 80 XP por dia útil: nível 5 em umas 2 a 3 semanas, n�
 
 O personagem muda de cor a cada faixa de título. É só visual; não dá vantagem.
 
+#### Por que a curva é assim
+
+A curva foi calibrada em 2026-10-05 pelos prazos que a pesquisa sobre formação de hábitos mede, convertidos em dias úteis a 80 XP por dia:
+
+| Título | Nível | XP acumulado | Dias úteis | Marco da pesquisa |
+|---|---|---|---|---|
+| Prata | 5 | 1.012 | 13 (~18 dias corridos) | 18 dias: o caso mais rápido de automatização observado por Lally (2010) |
+| Ouro | 10 | 3.411 | 43 (~2 meses) | 66 dias: mediana de Lally; a meta-análise de 2024 achou medianas de 59 a 66 dias |
+| Platina | 20 | 10.839 | 135 (~6 meses) | 2 a 5 meses: faixa típica da meta-análise (médias de 106 a 154 dias) |
+| Esmeralda | 35 | 27.042 | 338 (~16 meses) | 335 dias: o maior tempo registrado; quem chega aqui consolidou o hábito por qualquer medida |
+| Diamante, Mestre, Grão-Mestre | 50, 70, 100 | 48.205, 82.988, 147.370 | 2,4, 4 e 7 anos | Longo prazo, como os ranques do xadrez: reconhecem anos de constância |
+
+Três outras conclusões da mesma pesquisa aparecem nas regras:
+
+- **Perder um dia isolado não atrapalha** a formação do hábito; o que atrapalha é desistir depois da falha. Por isso os escudos protegem a sequência e o sistema nunca tira XP nem nível.
+- **Recompensa cedo importa**: o primeiro nível custa 150 XP, o que um dia completo (tarefas, rotina, checkout e missões) já cobre.
+- **Hábitos escolhidos pela própria pessoa são mais fortes**: a prioridade e as rotinas continuam nas mãos de quem usa.
+
+A curva antiga (`60 × nível^1,5`) deixava o nível 35 a mais de 8 anos de distância e o 100 a mais de um século. Fontes:
+
+- Lally, P. et al. (2010), *How are habits formed: Modelling habit formation in the real world*, European Journal of Social Psychology — [artigo](https://www.researchgate.net/publication/32898894_How_are_habits_formed_Modeling_habit_formation_in_the_real_world) · [resumo da autora](https://www.surrey.ac.uk/news/does-it-really-take-66-days-form-habit-we-asked-expert-dr-pippa-lally)
+- Singh, B. et al. (2024), *Time to Form a Habit: A Systematic Review and Meta-Analysis of Health Behaviour Habit Formation and Its Determinants*, Healthcare — [artigo](https://www.mdpi.com/2227-9032/12/23/2488) · [resumo](https://www.sciencedaily.com/releases/2025/01/250124151347.htm)
+
 ### Sequência e escudos
 
 - A sequência conta **dias úteis seguidos** (segunda a sexta) em que você ganhou XP com pelo menos uma tarefa ou rotina.
@@ -74,7 +101,9 @@ O personagem muda de cor a cada faixa de título. É só visual; não dá vantag
 
 ### Conquistas
 
-Medalhas permanentes por marcos de uso: tarefas concluídas (1, 50, 250, 1.000), rotinas marcadas (25, 200), checkouts enviados (1, 20, 100), dias perfeitos (1, 5, 25), sequência (7, 30, 100 dias) e nível (5, 10, 20).
+Medalhas permanentes por marcos de uso: tarefas concluídas (1, 50, 250, 1.000), rotinas marcadas (25, 200), checkouts enviados (1, 20, 100), dias perfeitos (1, 5, 25), sequência (7, 30, 45, 100 dias úteis) e nível (5, 10, 20, 35, 50). São 21 ao todo; a lista com os nomes está no README.
+
+O tema é a forja, em linha com os títulos de Bronze a Grão-Mestre: a tarefa é a martelada, a rotina é o fogo que não apaga, o checkout é o selo do ourives e a sequência é a chama. A conquista "Hábito Forjado" (45 dias úteis, cerca de 66 corridos) marca a mediana que a pesquisa mede para um hábito virar automático.
 
 - Uma conquista desbloqueada **nunca é retirada**, mesmo que você desfaça algo depois.
 - As de tarefas, rotina, checkout e dia perfeito dão um bônus único de XP (de 10 a 200). As de sequência e de nível são só reconhecimento, porque a sequência já paga bônus nos marcos e o nível é consequência do XP.

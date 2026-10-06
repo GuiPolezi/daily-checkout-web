@@ -108,8 +108,11 @@ export const DEFAULT_CONFIG: GamificationConfig = {
     perfectDay: 30,
   },
   level: {
-    coefficient: 60,
-    exponent: 1.5,
+    // XP do nível L = coefficient × L^exponent. Calibrada pelo ritmo real (~80 XP por dia útil)
+    // e pelos prazos da pesquisa sobre formação de hábitos: Prata (nível 5) em ~18 dias corridos,
+    // Ouro (10) em ~66 dias, Platina (20) em ~6 meses. Fontes em docs/GAMIFICACAO.md.
+    coefficient: 150,
+    exponent: 0.6,
     maxLevel: 200,
   },
   titles: [
@@ -198,9 +201,9 @@ export function mergeConfig(override: unknown): GamificationConfig {
     timeZone: isValidTimeZone(merged.timeZone) ? merged.timeZone : DEFAULT_CONFIG.timeZone,
     level: {
       ...merged.level,
-      // Coeficiente zerado ou expoente < 1 fariam o nível disparar; mantém o padrão nesses casos
+      // Coeficiente zerado ou expoente não positivo deixariam a curva sem sentido; mantém o padrão nesses casos
       coefficient: merged.level.coefficient >= 1 ? merged.level.coefficient : DEFAULT_CONFIG.level.coefficient,
-      exponent: merged.level.exponent >= 1 ? merged.level.exponent : DEFAULT_CONFIG.level.exponent,
+      exponent: merged.level.exponent > 0 ? merged.level.exponent : DEFAULT_CONFIG.level.exponent,
       maxLevel: merged.level.maxLevel >= 1 ? Math.floor(merged.level.maxLevel) : DEFAULT_CONFIG.level.maxLevel,
     },
     titles: [...merged.titles].sort((a, b) => a.minLevel - b.minLevel),

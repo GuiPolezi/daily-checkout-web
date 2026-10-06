@@ -703,6 +703,22 @@ html[data-theme="dark"] body::before {
   animation: mascot-sparkle 2.4s ease-in-out infinite;
 }
 
+/* Entrada de um retrato de personagem (lista que abre, troca do escolhido). Sem "forwards":
+   ao terminar, o elemento fica sem transform */
+@keyframes tile-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.tile-in {
+  animation: tile-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
 /* Personagem 2D: pulo curto quando o usuário escolhe uma comemoração (o 3D toca a animação de verdade) */
 @keyframes mascot-hop {
   0%,
@@ -726,6 +742,7 @@ html[data-theme="dark"] body::before {
 
 @media (prefers-reduced-motion: reduce) {
   .xp-toast,
+  .tile-in,
   .mascot-float,
   .mascot-sparkle,
   .mascot-hop {

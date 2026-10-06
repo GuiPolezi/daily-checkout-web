@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { ACHIEVEMENTS } from '@/src/lib/gamification/achievements'
 import { AVATAR_SLOTS, SLOT_LABELS, type AvatarItem, type AvatarSlot, type AvatarState } from '@/src/lib/gamification/avatar'
 import { findCharacter } from '@/src/lib/gamification/characters'
@@ -12,8 +12,12 @@ interface Props {
   onPreviewCelebration?: () => void
 }
 
+// Atraso entre a entrada de um retrato e o seguinte quando a lista de personagens abre
+const TILE_STAGGER_MS = 28
+
+const CHARACTER_HINT = 'Escolha quem representa você. Os bloqueados mostram como liberar.'
+
 const SLOT_HINTS: Partial<Record<AvatarSlot, string>> = {
-  character: 'Escolha quem representa você. Os bloqueados mostram como liberar.',
   celebration: 'Ao escolher, o personagem mostra a comemoração. Clique de novo para ver outra vez.',
 }
 
@@ -32,6 +36,9 @@ function lockHint(item: AvatarItem): string {
 export default function AvatarPicker({ avatar, onEquip, onPreviewCelebration }: Props) {
   const [busy, setBusy] = useState<string | null>(null)
   const [failed, setFailed] = useState(false)
+  // A lista de personagens é longa e fica recolhida; os outros itens ficam sempre à mostra
+  const [charactersOpen, setCharactersOpen] = useState(false)
+  const charactersId = useId()
 
   const equip = async (slot: AvatarSlot, itemId: string) => {
     if (busy) return
@@ -46,7 +53,7 @@ export default function AvatarPicker({ avatar, onEquip, onPreviewCelebration }: 
 
   const renderCharacterGrid = (items: AvatarState['items']) => (
     <div className="grid grid-cols-4 gap-2 sm:grid-cols-5 md:grid-cols-7">
-      {items.map(item => {
+      {items.map((item, index) => {
         const character = findCharacter(item.value)
         const selected = avatar.equipped.character === item.id
         const hint = item.unlocked ? '' : lockHint(item)
@@ -59,7 +66,10 @@ export default function AvatarPicker({ avatar, onEquip, onPreviewCelebration }: 
             aria-pressed={selected}
             aria-label={`${item.title}${hint ? ` · libera com ${hint}` : ''}`}
             title={character ? `${item.title}: ${character.description}${hint ? ` Libera com ${hint}.` : ''}` : item.title}
+            style={charactersOpen ? { animationDelay: `${index * TILE_STAGGER_MS}ms` } : undefined}
             className={`flex flex-col items-center gap-1 rounded-2xl p-1.5 text-center transition-all duration-200 ${
+              charactersOpen ? 'tile-in' : ''
+            } ${
               selected
                 ? 'bg-accent/13 ring-2 ring-accent/50'
                 : item.unlocked
@@ -96,6 +106,78 @@ export default function AvatarPicker({ avatar, onEquip, onPreviewCelebration }: 
       })}
     </div>
   )
+
+  // Personagens: uma linha com o escolhido que, ao clicar, abre a grade com todos
+  const renderCharacters = (items: AvatarState['items']) => {
+    const current = items.find(item => item.id === avatar.equipped.character)
+    const portrait = current ? findCharacter(current.value)?.portrait : undefined
+    const unlocked = items.filter(item => item.unlocked).length
+    return (
+      <>
+        <button
+          type="button"
+          onClick={() => setCharactersOpen(value => !value)}
+          aria-expanded={charactersOpen}
+          aria-controls={charactersId}
+          className="group flex w-full items-center gap-3 rounded-2xl bg-fill-soft p-2 pr-3.5 text-left outline-none transition-colors duration-300 hover:bg-fill focus-visible:ring-2 focus-visible:ring-accent/50"
+        >
+          <span className="block h-11 w-11 shrink-0 overflow-hidden rounded-xl bg-white/50 dark:bg-white/10">
+            {portrait && (
+              // A chave troca com o personagem, para o retrato novo entrar com a animação
+              // eslint-disable-next-line @next/next/no-img-element
+              <img key={portrait} src={portrait} alt="" draggable={false} className="tile-in h-full w-full object-contain" />
+            )}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-semibold text-ink">{current?.title ?? 'Escolher personagem'}</span>
+            <span className="block truncate text-xs tabular-nums text-ink-3">
+              {unlocked} de {items.length} liberados
+            </span>
+          </span>
+          <span className="hidden text-xs font-medium text-ink-3 transition-colors duration-300 group-hover:text-ink-2 sm:block">
+            {charactersOpen ? 'Recolher' : 'Trocar'}
+          </span>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+            className={`shrink-0 text-ink-3 transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
+              charactersOpen ? 'rotate-180' : ''
+            }`}
+          >
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        </button>
+
+        {/* A altura anima pela linha da grade (0fr → 1fr), sem precisar medir o conteúdo.
+            As margens negativas dão espaço ao anel de seleção, que o recorte cortaria */}
+        <div
+          id={charactersId}
+          inert={!charactersOpen}
+          className={`-mx-1 grid transition-[grid-template-rows] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
+            charactersOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+          }`}
+        >
+          <div className="min-h-0 overflow-hidden">
+            <div
+              className={`px-1 pb-1 pt-3 transition-opacity duration-300 motion-reduce:transition-none ${
+                charactersOpen ? 'opacity-100' : 'opacity-0'
+              }`}
+            >
+              <p className="mb-2.5 text-xs text-ink-3">{CHARACTER_HINT}</p>
+              {renderCharacterGrid(items)}
+            </div>
+          </div>
+        </div>
+      </>
+    )
+  }
 
   const renderChips = (slot: AvatarSlot, items: AvatarState['items']) => (
     <div className="flex flex-wrap gap-2">
@@ -147,7 +229,7 @@ export default function AvatarPicker({ avatar, onEquip, onPreviewCelebration }: 
             <div key={slot}>
               <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-ink-3">{SLOT_LABELS[slot]}</h3>
               {SLOT_HINTS[slot] && <p className="-mt-1 mb-2 text-xs text-ink-3">{SLOT_HINTS[slot]}</p>}
-              {slot === 'character' ? renderCharacterGrid(items) : renderChips(slot, items)}
+              {slot === 'character' ? renderCharacters(items) : renderChips(slot, items)}
             </div>
           )
         })}

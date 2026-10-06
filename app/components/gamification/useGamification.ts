@@ -48,6 +48,8 @@ export function useGamification() {
   // Contadores que avisam o personagem para comemorar
   const [gainCount, setGainCount] = useState(0)
   const [levelUpCount, setLevelUpCount] = useState(0)
+  // Muda quando o usuário escolhe (ou pede para rever) uma comemoração: o personagem a mostra na hora
+  const [celebrationCount, setCelebrationCount] = useState(0)
 
   const queue = useRef<Promise<void>>(Promise.resolve())
   const disabled = useRef(false)
@@ -151,12 +153,21 @@ export function useGamification() {
       })
       if (!response.ok) return false
       const result = (await response.json()) as { avatar: AvatarState }
-      if (mounted.current) setAvatar(result.avatar)
+      if (mounted.current) {
+        setAvatar(result.avatar)
+        if (slot === 'celebration') setCelebrationCount(count => count + 1)
+      }
       return true
     } catch {
       return false
     }
   }, [])
 
-  return { summary, available, notConfigured, taskXp, achievements, achievementToasts, missions, team, avatar, equip, toasts, levelUp, dismissLevelUp, gainCount, levelUpCount, sync }
+  /** Faz o personagem repetir a comemoração equipada */
+  const previewCelebration = useCallback(() => setCelebrationCount(count => count + 1), [])
+
+  return {
+    summary, available, notConfigured, taskXp, achievements, achievementToasts, missions, team, avatar, equip,
+    toasts, levelUp, dismissLevelUp, gainCount, levelUpCount, celebrationCount, previewCelebration, sync,
+  }
 }

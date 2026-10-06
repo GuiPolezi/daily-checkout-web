@@ -121,6 +121,7 @@ export default function ProfilePage() {
                 name={session?.user?.email?.split('@')[0] ?? ''}
                 gainCount={game.gainCount}
                 levelUpCount={game.levelUpCount}
+                celebrationCount={game.celebrationCount}
               />
             </div>
 
@@ -128,7 +129,7 @@ export default function ProfilePage() {
               <>
                 {game.avatar && (
                   <div className="rise" style={{ animationDelay: '80ms' }}>
-                    <AvatarPicker avatar={game.avatar} onEquip={game.equip} />
+                    <AvatarPicker avatar={game.avatar} onEquip={game.equip} onPreviewCelebration={game.previewCelebration} />
                   </div>
                 )}
 

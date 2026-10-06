@@ -12,6 +12,8 @@ interface Props {
   avatar?: AvatarState | null
   gainCount: number
   levelUpCount: number
+  /** Muda quando o usuário escolhe uma comemoração; o 3D a toca e o 2D dá um pulo */
+  celebrationCount?: number
 }
 
 // O 3D (three.js + modelo) fica num pedaço separado do bundle, baixado só no navegador
@@ -39,7 +41,7 @@ function canUse3D(): boolean {
 // Duração do fade do 2D para o 3D (igual ao duration-500 usado abaixo)
 const FADE_MS = 500
 
-export default function Character({ tier, avatar, gainCount, levelUpCount }: Props) {
+export default function Character({ tier, avatar, gainCount, levelUpCount, celebrationCount = 0 }: Props) {
   const equipped = avatar?.equipped
   // Objeto estável: o 3D só reaplica as cores quando algo muda de fato
   const look = useMemo(
@@ -78,7 +80,10 @@ export default function Character({ tier, avatar, gainCount, levelUpCount }: Pro
       {/* O 2D fica à mostra até o modelo 3D terminar de carregar */}
       {show2D && (
         <div className={`h-full w-full transition-opacity duration-500 ${ready ? 'opacity-0' : 'opacity-100'}`}>
-          <Character2D look={look} />
+          {/* A chave reinicia a animação do pulo a cada comemoração escolhida */}
+          <div key={celebrationCount} className={`h-full w-full ${celebrationCount > 0 ? 'mascot-hop' : ''}`}>
+            <Character2D look={look} />
+          </div>
         </div>
       )}
       {mode === '3d' && (
@@ -87,6 +92,7 @@ export default function Character({ tier, avatar, gainCount, levelUpCount }: Pro
             look={look}
             gainCount={gainCount}
             levelUpCount={levelUpCount}
+            celebrationCount={celebrationCount}
             onReady={() => setReady(true)}
             onError={() => { setReady(false); setMode('2d') }}
           />

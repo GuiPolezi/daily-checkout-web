@@ -187,7 +187,7 @@ Em **Meu Perfil** você personaliza três coisas. Os itens são liberados por n�
 | **Cor da aura** | Automática · Azul (1) · Verde (2) · Rosa (4) · Lilás (6) · Dourada (10) |
 | **Comemoração** | Joinha (1) · Sim! (2) · Pulo (4) · Soco no ar (6) · Dança (8) |
 
-"Automática" segue a cor da sua faixa de título.
+"Automática" segue a cor da sua faixa de título. Ao escolher uma comemoração, o personagem a mostra na hora; clique de novo para repetir.
 
 ### Onde acompanhar
 

@@ -6,16 +6,26 @@ import { AVATAR_SLOTS, SLOT_LABELS, type AvatarSlot, type AvatarState } from '@/
 interface Props {
   avatar: AvatarState
   onEquip: (slot: AvatarSlot, itemId: string) => Promise<boolean>
+  /** Chamado ao clicar na comemoração já equipada: o personagem a repete */
+  onPreviewCelebration?: () => void
+}
+
+const SLOT_HINTS: Partial<Record<AvatarSlot, string>> = {
+  celebration: 'Ao escolher, o personagem mostra a comemoração. Clique de novo para ver outra vez.',
 }
 
 // Escolha dos itens cosméticos do personagem. O servidor confere o nível de novo ao equipar;
 // aqui os itens bloqueados só aparecem desabilitados, com o nível que os libera.
-export default function AvatarPicker({ avatar, onEquip }: Props) {
+export default function AvatarPicker({ avatar, onEquip, onPreviewCelebration }: Props) {
   const [busy, setBusy] = useState<string | null>(null)
   const [failed, setFailed] = useState(false)
 
   const equip = async (slot: AvatarSlot, itemId: string) => {
-    if (busy || avatar.equipped[slot] === itemId) return
+    if (busy) return
+    if (avatar.equipped[slot] === itemId) {
+      if (slot === 'celebration') onPreviewCelebration?.()
+      return
+    }
     setBusy(itemId)
     setFailed(!(await onEquip(slot, itemId)))
     setBusy(null)
@@ -30,6 +40,7 @@ export default function AvatarPicker({ avatar, onEquip }: Props) {
         {AVATAR_SLOTS.map(slot => (
           <div key={slot}>
             <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-ink-3">{SLOT_LABELS[slot]}</h3>
+            {SLOT_HINTS[slot] && <p className="-mt-1 mb-2 text-xs text-ink-3">{SLOT_HINTS[slot]}</p>}
             <div className="flex flex-wrap gap-2">
               {avatar.items.filter(item => item.slot === slot).map(item => {
                 const selected = avatar.equipped[slot] === item.id

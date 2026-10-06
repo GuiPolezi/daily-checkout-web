@@ -151,7 +151,7 @@ Metas semanais que valem para a equipe inteira, mostradas junto das missões. **
 
 ### Personagem
 
-Em **Meu Perfil** dá para escolher a cor do personagem, a cor da aura e a comemoração que ele faz quando você ganha XP. Os itens são liberados por nível e são só visuais. A opção "Automática" segue a cor da sua faixa de título. Este é um conjunto padrão inicial; itens personalizados entram depois.
+Em **Meu Perfil** dá para escolher a cor do personagem, a cor da aura e a comemoração que ele faz quando você ganha XP. Os itens são liberados por nível e são só visuais. A opção "Automática" segue a cor da sua faixa de título. Ao escolher uma comemoração, o personagem a mostra na hora (clique de novo na escolhida para repetir); na versão 2D ele dá só um pulo. Este é um conjunto padrão inicial; itens personalizados entram depois.
 
 ### Onde ver
 

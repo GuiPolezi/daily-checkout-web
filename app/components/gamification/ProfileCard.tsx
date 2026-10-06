@@ -11,6 +11,8 @@ interface Props {
   name: string
   gainCount: number
   levelUpCount: number
+  /** Muda quando o usuário escolhe uma comemoração (só a página de perfil usa) */
+  celebrationCount?: number
 }
 
 const plural = (count: number, one: string, many: string) => (count === 1 ? one : many)
@@ -20,7 +22,7 @@ const STAGE = 'h-28 w-28 shrink-0 overflow-hidden rounded-3xl sm:h-36 sm:w-36'
 // Selos um pouco menores que o padrão do sistema, para os três caberem lado a lado no card
 const CHIP = 'px-2.5 py-1 text-[11px]'
 
-export default function ProfileCard({ summary, avatar, name, gainCount, levelUpCount }: Props) {
+export default function ProfileCard({ summary, avatar, name, gainCount, levelUpCount, celebrationCount }: Props) {
   if (!summary) {
     return (
       <section className={CARD} aria-busy="true" aria-label="Carregando seu perfil">
@@ -52,7 +54,7 @@ export default function ProfileCard({ summary, avatar, name, gainCount, levelUpC
           background: `radial-gradient(120% 90% at 50% 100%, color-mix(in srgb, ${aura} 34%, transparent), color-mix(in srgb, ${aura} 10%, transparent) 70%), var(--fill-soft)`,
         }}
       >
-        <Character tier={summary.tier} avatar={avatar} gainCount={gainCount} levelUpCount={levelUpCount} />
+        <Character tier={summary.tier} avatar={avatar} gainCount={gainCount} levelUpCount={levelUpCount} celebrationCount={celebrationCount} />
       </div>
 
       <div className="min-w-0 flex-1">

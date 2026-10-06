@@ -703,10 +703,32 @@ html[data-theme="dark"] body::before {
   animation: mascot-sparkle 2.4s ease-in-out infinite;
 }
 
+/* Personagem 2D: pulo curto quando o usuário escolhe uma comemoração (o 3D toca a animação de verdade) */
+@keyframes mascot-hop {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  30% {
+    transform: translateY(-12px) scale(1.06);
+  }
+  60% {
+    transform: translateY(0) scale(0.97);
+  }
+  80% {
+    transform: translateY(-5px) scale(1.02);
+  }
+}
+.mascot-hop {
+  animation: mascot-hop 0.7s ease-out 1;
+  transform-origin: 50% 100%;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .xp-toast,
   .mascot-float,
-  .mascot-sparkle {
+  .mascot-sparkle,
+  .mascot-hop {
     animation: none;
   }
   .confetti-piece {

@@ -17,6 +17,8 @@ interface Props {
   gainCount: number
   /** Muda a cada subida de nível → o personagem acena */
   levelUpCount: number
+  /** Muda quando o usuário escolhe uma comemoração → o personagem a mostra */
+  celebrationCount: number
   /** Chamado quando o modelo terminou de carregar e já está na tela */
   onReady: () => void
   /** Chamado se o 3D não puder ser exibido (o card volta para o 2D) */
@@ -28,7 +30,7 @@ interface SceneApi {
   setLook: (look: TierLook) => void
 }
 
-export default function Character3D({ look, gainCount, levelUpCount, onReady, onError }: Props) {
+export default function Character3D({ look, gainCount, levelUpCount, celebrationCount, onReady, onError }: Props) {
   const hostRef = useRef<HTMLDivElement>(null)
   const apiRef = useRef<SceneApi | null>(null)
   const lookRef = useRef(look)
@@ -236,6 +238,11 @@ export default function Character3D({ look, gainCount, levelUpCount, onReady, on
   useEffect(() => {
     if (levelUpCount > 0) apiRef.current?.play('Wave')
   }, [levelUpCount])
+
+  // Roda depois do efeito de `look`, então a comemoração mostrada é a que acabou de ser equipada
+  useEffect(() => {
+    if (celebrationCount > 0) apiRef.current?.play(lookRef.current.celebration)
+  }, [celebrationCount])
 
   return <div ref={hostRef} className="h-full w-full" aria-hidden="true" />
 }

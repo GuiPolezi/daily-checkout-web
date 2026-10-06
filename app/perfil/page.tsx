@@ -12,6 +12,7 @@ import XpFeedback from '@/app/components/gamification/XpFeedback'
 import { useGamification } from '@/app/components/gamification/useGamification'
 import { todayLocal } from '@/src/lib/gamification/day'
 import { totalXpForLevel, xpForLevel } from '@/src/lib/gamification/levels'
+import { loadHistoryPage, type HistoryPage } from '@/src/lib/profile/xpHistory'
 import { DISPLAY_NAME_KEY, normalizeDisplayName, resolveDisplayName } from '@/src/lib/profile/displayName'
 
 interface XpEventRow {
@@ -23,7 +24,7 @@ interface XpEventRow {
   metadata: { title?: string; streakDays?: number; tasks?: number } | null
 }
 
-const HISTORY_LIMIT = 60
+const HISTORY_PAGE_SIZE = 10
 const NEXT_LEVELS_SHOWN = 5
 
 const EVENT_LABEL: Record<string, string> = {
@@ -48,13 +49,18 @@ function eventDetail(event: XpEventRow): string | null {
   return null
 }
 
+// Setas da paginação do histórico: mesmo desenho das setas de data da tela Meu Dia
+const PAGE_BUTTON =
+  'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-ink-2 transition-all hover:bg-fill hover:text-ink active:scale-90 focus-visible:outline-2 focus-visible:outline-accent/60 disabled:pointer-events-none disabled:opacity-30'
+
 const formatDay = (day: string) => new Date(`${day}T12:00:00`).toLocaleDateString('pt-BR')
 
 export default function ProfilePage() {
   const [session, setSession] = useState<Session | null>(null)
   const [checked, setChecked] = useState(false)
-  const [events, setEvents] = useState<XpEventRow[]>([])
+  const [history, setHistory] = useState<HistoryPage<XpEventRow>>({ rows: [], total: 0, page: 0 })
   const [loadingEvents, setLoadingEvents] = useState(true)
+  const [changingPage, setChangingPage] = useState(false)
   const game = useGamification()
   const syncXp = game.sync
   const userId = session?.user?.id
@@ -66,26 +72,51 @@ export default function ProfilePage() {
     })
   }, [])
 
+  const loadHistory = useCallback((page: number) => {
+    if (!userId) return Promise.resolve(null)
+    return loadHistoryPage<XpEventRow>(
+      (from, to) => supabase
+        .from('xp_events')
+        .select('id,type,amount,day,created_at,metadata', { count: 'exact' })
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .range(from, to),
+      page,
+      HISTORY_PAGE_SIZE,
+    )
+  }, [userId])
+
   useEffect(() => {
     if (!userId) return
     let cancelled = false
 
     // Sincroniza primeiro para o histórico já vir com o que foi feito hoje
     syncXp(todayLocal(), { silent: true }).then(async () => {
-      const { data } = await supabase
-        .from('xp_events')
-        .select('id,type,amount,day,created_at,metadata')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .order('id', { ascending: false })
-        .limit(HISTORY_LIMIT)
+      const page = await loadHistory(0)
       if (cancelled) return
-      setEvents((data as XpEventRow[] | null) ?? [])
+      if (page) setHistory(page)
       setLoadingEvents(false)
     })
 
     return () => { cancelled = true }
-  }, [userId, syncXp])
+  }, [userId, syncXp, loadHistory])
+
+  const events = history.rows
+  const historyTotal = history.total
+  const historyPage = history.page
+  const historyPageCount = Math.max(1, Math.ceil(historyTotal / HISTORY_PAGE_SIZE))
+  const historyFirst = historyPage * HISTORY_PAGE_SIZE + 1
+  const historyLast = Math.min(historyTotal, historyFirst + HISTORY_PAGE_SIZE - 1)
+
+  const goToHistoryPage = async (page: number) => {
+    if (changingPage || page < 0 || page >= historyPageCount) return
+    setChangingPage(true)
+    // Se a leitura falhar, a página que já estava na tela (e o contador dela) continua lá
+    const loaded = await loadHistory(page)
+    if (loaded) setHistory(loaded)
+    setChangingPage(false)
+  }
 
   // O nome fica nos metadados da própria conta (Supabase Auth); vazio volta ao padrão do e-mail
   const rename = useCallback(async (raw: string) => {
@@ -262,7 +293,35 @@ export default function ProfilePage() {
                   <section className="glass rise overflow-hidden rounded-[1.75rem]" style={{ animationDelay: '180ms' }}>
                     <div className="flex items-center justify-between gap-3 px-5 pt-5 pb-3 sm:px-6">
                       <h2 className="text-[15px] font-semibold text-ink">Histórico de XP</h2>
-                      <span className="text-[12px] text-ink-3">Últimos {HISTORY_LIMIT} lançamentos</span>
+                      {historyTotal > HISTORY_PAGE_SIZE ? (
+                        <nav aria-label="Páginas do histórico de XP" className="flex items-center gap-0.5">
+                          <span className="mr-1.5 text-[12px] tabular-nums text-ink-3" aria-live="polite">
+                            {historyFirst}–{historyLast} de {historyTotal}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => goToHistoryPage(historyPage - 1)}
+                            disabled={historyPage === 0}
+                            aria-label="Lançamentos mais recentes"
+                            className={PAGE_BUTTON}
+                          >
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 19l-7-7 7-7" /></svg>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => goToHistoryPage(historyPage + 1)}
+                            disabled={historyPage >= historyPageCount - 1}
+                            aria-label="Lançamentos mais antigos"
+                            className={PAGE_BUTTON}
+                          >
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7" /></svg>
+                          </button>
+                        </nav>
+                      ) : historyTotal > 0 ? (
+                        <span className="text-[12px] tabular-nums text-ink-3">
+                          {historyTotal} {historyTotal === 1 ? 'lançamento' : 'lançamentos'}
+                        </span>
+                      ) : null}
                     </div>
 
                     {loadingEvents ? (
@@ -272,7 +331,10 @@ export default function ProfilePage() {
                         Nenhum XP ainda. Conclua uma tarefa do dia para começar.
                       </p>
                     ) : (
-                      <ul>
+                      <ul
+                        aria-busy={changingPage}
+                        className={`transition-opacity duration-200 ${changingPage ? 'opacity-50' : ''}`}
+                      >
                         {events.map(event => {
                           const detail = eventDetail(event)
                           return (

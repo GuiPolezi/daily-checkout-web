@@ -3,12 +3,15 @@
 import type { AvatarState } from '@/src/lib/gamification/avatar'
 import type { ProgressSummary } from '@/src/lib/gamification/types'
 import Character from './Character'
+import EditableName from './EditableName'
 import { resolveLook } from './tiers'
 
 interface Props {
   summary: ProgressSummary | null
   avatar?: AvatarState | null
   name: string
+  /** Quando informado, o nome pode ser alterado ali mesmo (só a página de perfil usa) */
+  onRename?: (name: string) => Promise<void>
   gainCount: number
   levelUpCount: number
   /** Muda quando o usuário escolhe uma comemoração (só a página de perfil usa) */
@@ -22,7 +25,7 @@ const STAGE = 'h-28 w-28 shrink-0 overflow-hidden rounded-3xl sm:h-36 sm:w-36'
 // Selos um pouco menores que o padrão do sistema, para os três caberem lado a lado no card
 const CHIP = 'px-2.5 py-1 text-[11px]'
 
-export default function ProfileCard({ summary, avatar, name, gainCount, levelUpCount, celebrationCount }: Props) {
+export default function ProfileCard({ summary, avatar, name, onRename, gainCount, levelUpCount, celebrationCount }: Props) {
   if (!summary) {
     return (
       <section className={CARD} aria-busy="true" aria-label="Carregando seu perfil">
@@ -58,7 +61,11 @@ export default function ProfileCard({ summary, avatar, name, gainCount, levelUpC
       </div>
 
       <div className="min-w-0 flex-1">
-        <p className="truncate text-lg font-semibold capitalize leading-tight tracking-tight text-ink">{name}</p>
+        {onRename ? (
+          <EditableName name={name} onRename={onRename} />
+        ) : (
+          <p className="truncate text-lg font-semibold leading-tight tracking-tight text-ink">{name}</p>
+        )}
         <p className="mt-1 text-[13px] text-ink-2">
           <span className="font-semibold text-accent">Nível {summary.level}</span>
           <span className="mx-1.5 text-ink-4">·</span>

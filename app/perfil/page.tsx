@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '@/src/lib/supabaseClient'
@@ -12,6 +12,7 @@ import XpFeedback from '@/app/components/gamification/XpFeedback'
 import { useGamification } from '@/app/components/gamification/useGamification'
 import { todayLocal } from '@/src/lib/gamification/day'
 import { totalXpForLevel, xpForLevel } from '@/src/lib/gamification/levels'
+import { DISPLAY_NAME_KEY, normalizeDisplayName, resolveDisplayName } from '@/src/lib/profile/displayName'
 
 interface XpEventRow {
   id: number
@@ -86,6 +87,14 @@ export default function ProfilePage() {
     return () => { cancelled = true }
   }, [userId, syncXp])
 
+  // O nome fica nos metadados da própria conta (Supabase Auth); vazio volta ao padrão do e-mail
+  const rename = useCallback(async (raw: string) => {
+    const name = normalizeDisplayName(raw)
+    const { data, error } = await supabase.auth.updateUser({ data: { [DISPLAY_NAME_KEY]: name || null } })
+    if (error) throw error
+    setSession(current => (current ? { ...current, user: data.user } : current))
+  }, [])
+
   const summary = game.summary
 
   return (
@@ -118,7 +127,8 @@ export default function ProfilePage() {
               <ProfileCard
                 summary={summary}
                 avatar={game.avatar}
-                name={session?.user?.email?.split('@')[0] ?? ''}
+                name={resolveDisplayName(session?.user)}
+                onRename={rename}
                 gainCount={game.gainCount}
                 levelUpCount={game.levelUpCount}
                 celebrationCount={game.celebrationCount}

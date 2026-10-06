@@ -10,6 +10,7 @@ import MissionsPanel from '@/app/components/gamification/MissionsPanel'
 import ProfileCard from '@/app/components/gamification/ProfileCard'
 import XpFeedback from '@/app/components/gamification/XpFeedback'
 import { useGamification } from '@/app/components/gamification/useGamification'
+import { resolveDisplayName } from '@/src/lib/profile/displayName'
 import { todayLocal } from '@/src/lib/gamification/day'
 import type { AwardReason } from '@/src/lib/gamification/types'
 
@@ -371,7 +372,7 @@ export default function Home() {
             <ProfileCard
               summary={game.summary}
               avatar={game.avatar}
-              name={session.user.email?.split('@')[0] ?? ''}
+              name={resolveDisplayName(session.user)}
               gainCount={game.gainCount}
               levelUpCount={game.levelUpCount}
             />

@@ -2,13 +2,19 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/src/lib/supabaseClient'
 import TopNav from '@/app/components/TopNav'
+import { resolveDisplayName } from '@/src/lib/profile/displayName'
 
 export default function UsersPage() {
   const [users, setUsers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  // O nome escolhido fica na conta de quem está logado; a visão da equipe só tem o e-mail
+  const [me, setMe] = useState<{ id: string; name: string } | null>(null)
 
   useEffect(() => {
     fetchUsers()
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) setMe({ id: session.user.id, name: resolveDisplayName(session.user) })
+    })
   }, [])
 
   async function fetchUsers() {
@@ -45,7 +51,10 @@ export default function UsersPage() {
         ) : (
           /* ─── GRID DE USUÁRIOS ─── */
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-            {users.map((user, i) => (
+            {users.map((user, i) => {
+              const ownName = me && me.id === user.id ? me.name : null
+              const name = ownName || user.email.split('@')[0]
+              return (
               <div
                 key={user.id}
                 className="glass rise group flex flex-col items-center rounded-[1.75rem] p-6 text-center transition-shadow duration-300 hover:shadow-[0_20px_44px_-18px_rgba(23,52,92,0.3)] sm:p-7"
@@ -57,15 +66,15 @@ export default function UsersPage() {
                   <div className="relative h-full w-full overflow-hidden rounded-full bg-fill shadow-[0_10px_24px_-10px_rgba(23,52,92,0.35)] ring-4 ring-white/80 transition-all duration-300 group-hover:ring-accent/40 dark:ring-white/15">
                     <img
                       src={user.avatar_url || `https://ui-avatars.com/api/?name=${user.email}&background=007AFF&color=fff&size=128`}
-                      alt={`Perfil de ${user.email.split('@')[0]}`}
+                      alt={`Perfil de ${name}`}
                       className="h-full w-full object-cover"
                     />
                   </div>
                 </div>
 
                 {/* Identificação */}
-                <h2 className="w-full truncate text-lg font-semibold capitalize tracking-tight text-ink">
-                  {user.email.split('@')[0]}
+                <h2 className={`w-full truncate text-lg font-semibold tracking-tight text-ink ${ownName ? '' : 'capitalize'}`}>
+                  {name}
                 </h2>
                 <p className="mb-6 mt-0.5 w-full truncate px-2 text-[12px] text-ink-3">
                   {user.email}
@@ -92,7 +101,8 @@ export default function UsersPage() {
                   </div>
                 </div>
               </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>

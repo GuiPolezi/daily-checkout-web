@@ -177,17 +177,18 @@ As de sequência e de nível são só reconhecimento: a sequência já paga bôn
 
 ### Seu personagem
 
-Na página **Meu Dia** mora o seu personagem: um robô 3D que acompanha o mouse, comemora quando você ganha XP e acena quando você sobe de nível. Em aparelhos mais simples, ou com "reduzir movimento" ligado, ele aparece em versão 2D.
+Na página **Meu Dia** mora o seu personagem: um boneco 3D (o Robô, por padrão) que acompanha o mouse, comemora quando você ganha XP e acena quando você sobe de nível. Em aparelhos mais simples, ou com "reduzir movimento" ligado, ele aparece em versão 2D.
 
-Em **Meu Perfil** você personaliza três coisas. Os itens são liberados por nível e são **só visuais** — nenhum dá vantagem.
+Em **Meu Perfil** você escolhe o personagem e personaliza mais três coisas. Os itens são liberados por nível ou por conquista e são **só visuais** — nenhum dá vantagem.
 
 | O que muda | Opções (nível que libera) |
 |---|---|
+| **Personagem** | Robô e Aprendiz (1) · Minerador (3) · Ferreira e Vidreira (5) · Guarda (8) · Ourives e Inventor (10) · Mercador (15) · Alquimista (20) · Fundidor (conquista Ritmo da Forja) · Lapidária (conquista Livro da Oficina) · Exploradora (conquista Brasa Constante) |
 | **Cor do personagem** | Automática · Céu (1) · Menta (2) · Coral (3) · Violeta (5) · Âmbar (8) · Ônix (12) |
 | **Cor da aura** | Automática · Azul (1) · Verde (2) · Rosa (4) · Lilás (6) · Dourada (10) |
 | **Comemoração** | Joinha (1) · Sim! (2) · Pulo (4) · Soco no ar (6) · Dança (8) |
 
-"Automática" segue a cor da sua faixa de título. Ao escolher uma comemoração, o personagem a mostra na hora; clique de novo para repetir.
+"Automática" segue a cor da sua faixa de título. Ao escolher uma comemoração, o personagem a mostra na hora; clique de novo para repetir. A grade de personagens funciona como a tela de escolha dos jogos de montar: os bloqueados aparecem apagados, com o que falta para liberar.
 
 ### Onde acompanhar
 

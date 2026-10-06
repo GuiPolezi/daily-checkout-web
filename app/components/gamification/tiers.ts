@@ -3,6 +3,7 @@
 // Tudo é só visual: troca de cores e de animação no mesmo modelo, sem vantagem de jogo.
 
 import { findAvatarItem, type AvatarState } from '@/src/lib/gamification/avatar'
+import { defaultCharacter, findCharacter, type CharacterDefinition } from '@/src/lib/gamification/characters'
 
 export interface TierLook {
   /** Cor principal do personagem */
@@ -43,4 +44,9 @@ export function resolveLook(tier: number, avatar?: AvatarState | null): Characte
     aura: valueOf(avatar?.equipped.aura) ?? base.aura,
     celebration: valueOf(avatar?.equipped.celebration) ?? DEFAULT_CELEBRATION,
   }
+}
+
+/** Personagem equipado (o robô quando não há nada salvo ou o item não existe mais) */
+export function characterFor(avatar?: AvatarState | null): CharacterDefinition {
+  return findCharacter(findAvatarItem(avatar?.equipped.character)?.value) ?? defaultCharacter()
 }

@@ -111,6 +111,8 @@ Ajustes no plano a partir disso: a fase 2 (acessórios) começa pelos óculos e 
 
 ### Fase 1 — Escolher o personagem (duas a três sessões)
 
+**Entregue em 2026-10-05.** O que mudou em relação ao previsto: o desbloqueio por conquista já entrou nesta fase (três personagens); a versão 2D passou a mostrar o retrato do personagem escolhido; a "Dança" nos Mini Characters é um giro feito no código sobre o clipe de pulo. Os retratos foram gerados por uma página temporária (fora do repositório) que renderiza cada modelo com a câmera do card e grava o PNG; para regenerar, basta repetir o processo com a mesma câmera (`position (0, 1.25, 5.4)`, `lookAt (0, 0.95, 0)`, altura normalizada 2, rotação 0,35 rad, 256×256).
+
 - Catálogo `src/lib/gamification/characters.ts`: id, nome, arquivo do modelo, retrato, mapa de animações, aceita tinta, regra de desbloqueio (`minLevel` ou `achievementId`).
 - Slot `character` em `avatar.ts`; `checkEquip` passa a aceitar desbloqueio por conquista (lê `user_achievements`, já carregado no sync).
 - `Character3D` recebe a URL do modelo e o mapa de animações; troca o modelo quando o slot muda.

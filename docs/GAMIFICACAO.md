@@ -151,7 +151,7 @@ Metas semanais que valem para a equipe inteira, mostradas junto das missões. **
 
 ### Personagem
 
-Em **Meu Perfil** dá para escolher a cor do personagem, a cor da aura e a comemoração que ele faz quando você ganha XP. Os itens são liberados por nível e são só visuais. A opção "Automática" segue a cor da sua faixa de título. Ao escolher uma comemoração, o personagem a mostra na hora (clique de novo na escolhida para repetir); na versão 2D ele dá só um pulo. Este é um conjunto padrão inicial; itens personalizados entram depois.
+Em **Meu Perfil** dá para escolher o personagem (13 no elenco: o Robô e 12 figuras de ofícios da oficina, liberadas por nível ou por conquista), a cor do personagem, a cor da aura e a comemoração que ele faz quando você ganha XP. A grade de personagens mostra os bloqueados apagados, com o que falta para liberar. O plano completo, com fases e decisões, está em [`PERSONAGENS-PLANO.md`](./PERSONAGENS-PLANO.md). Os itens são liberados por nível e são só visuais. A opção "Automática" segue a cor da sua faixa de título. Ao escolher uma comemoração, o personagem a mostra na hora (clique de novo na escolhida para repetir); na versão 2D ele dá só um pulo. Este é um conjunto padrão inicial; itens personalizados entram depois.
 
 ### Onde ver
 
@@ -194,6 +194,7 @@ A tela Meu Dia sincroniza ao abrir um dia e depois de mover, editar ou apagar ta
 | `src/lib/gamification/service.ts` | `syncDay`: orquestra tudo por meio de `GamificationRepo` |
 | `src/lib/gamification/supabaseRepo.ts` | Acesso ao Supabase (somente servidor) |
 | `app/api/gamification/sync/route.ts` | Rota que valida o login e chama o serviço |
+| `src/lib/gamification/characters.ts` | Elenco de personagens: modelo, retrato, rig de animação e regra de desbloqueio de cada um |
 | `app/components/gamification/` | Card, personagem 3D/2D, avisos de XP, hook |
 | `app/perfil/page.tsx` | Página "Meu Perfil" |
 | `supabase/migrations/` | SQL das tabelas e da correção de segurança |
@@ -208,7 +209,7 @@ A tela Meu Dia sincroniza ao abrir um dia e depois de mover, editar ou apagar ta
 - **`tasks.completed_at`** — preenchida por trigger no banco quando a tarefa entra em "Concluída". O cliente não consegue forjar essa data, nem `created_at`.
 - **`user_achievements`** — conquistas desbloqueadas por pessoa. O catálogo fica no código (`src/lib/gamification/achievements.ts`); a tabela `achievements` é espelhada pelo servidor conforme as conquistas são desbloqueadas.
 - **`xp_user_stats`** — view com as contagens usadas para desbloquear conquistas (migration 003).
-- **`user_avatar`** — o que cada pessoa tem equipado (JSON por slot). O catálogo de itens fica no código (`src/lib/gamification/avatar.ts`); a tabela `avatar_items` ainda não é usada. Quem grava é a rota `POST /api/gamification/avatar`, que confere no ledger se o nível libera o item.
+- **`user_avatar`** — o que cada pessoa tem equipado (JSON por slot). O catálogo de itens fica no código (`src/lib/gamification/avatar.ts`); a tabela `avatar_items` ainda não é usada. Quem grava é a rota `POST /api/gamification/avatar`, que confere no ledger se o nível libera o item e, para itens que pedem conquista, se ela está em `user_achievements`. O slot `character` guarda o personagem escolhido (padrão: o Robô).
 - **Metas da equipe** também não têm tabela: o servidor lê `xp_day_totals` de toda a equipe na semana (com a service role) e devolve só os agregados; a recompensa é um evento `TEAM_GOAL` sem dia, com chave `usuário:team:<id>:<segunda-feira da semana>`. O código fica em `src/lib/gamification/team.ts`.
 - **Missões** não têm tabela própria: as diárias são origens `mission:<id>` na reconciliação do dia; as semanais são eventos `MISSION_COMPLETED` sem dia, com chave `usuário:mission:<id>:<segunda-feira da semana>`. O catálogo fica em `src/lib/gamification/missions.ts`.
 
@@ -268,6 +269,9 @@ Pode ser executado mais de uma vez; cada pessoa recebe no máximo um lançamento
 ### Personagem 3D
 
 - `three` puro (sem bibliotecas adicionais), carregado sob demanda: fica fora do bundle inicial e só é baixado quando o navegador está ocioso.
+- Elenco: `RobotExpressive.glb` (464 KB) e os 12 Mini Characters da Kenney em `public/models/mini/` (cerca de 250 KB cada, textura compartilhada), todos CC0 (`public/models/LICENSE.md`). Só o modelo escolhido é baixado; trocar de personagem troca o modelo no mesmo palco.
+- Cada modelo declara um rig em `characters.ts`: clipe de repouso, de subida de nível e de cada comemoração, quantas vezes repetir (os clipes da Kenney são curtos) e qual material ou malha recebe a cor do corpo. A comemoração "Dança" ganha um giro feito no código nos modelos que não têm dança.
+- Retratos PNG em `public/models/portraits/` (gerados uma vez a partir dos modelos, com a mesma câmera do card) alimentam a grade de escolha e a versão 2D.
 - Modelo `public/models/RobotExpressive.glb` (464 KB), licença CC0 — detalhes em `public/models/LICENSE.md`.
 - Renderiza a no máximo 30 quadros por segundo e pausa quando o card sai da tela ou a aba fica oculta.
 - Volta para o personagem 2D (SVG) quando não há WebGL, o aparelho tem pouca memória, a economia de dados está ligada, "reduzir movimento" está ativo ou o modelo falha ao carregar.

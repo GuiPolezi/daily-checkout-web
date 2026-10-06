@@ -3,15 +3,18 @@
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
+import { RIGS, type CharacterDefinition, type RigDefinition } from '@/src/lib/gamification/characters'
 import type { CharacterLook, TierLook } from './tiers'
 
-// Modelo "RobotExpressive" — Tomás Laulhé (Quaternius), CC0 1.0. Ver public/models/LICENSE.md
-const MODEL_URL = '/models/RobotExpressive.glb'
-const TINTED_MATERIAL = 'Main'
+// Modelos: RobotExpressive (Quaternius/Don McCurdy, CC0) e Kenney Mini Characters (CC0). Ver public/models/LICENSE.md
 const FRAME_MS = 1000 / 30
 const MODEL_HEIGHT = 2
+/** Duração do giro de 360° usado pelas comemorações marcadas em `spinOn` do rig */
+const SPIN_MS = 900
 
 interface Props {
+  /** Personagem escolhido; trocar o id carrega outro modelo no mesmo palco */
+  character: CharacterDefinition
   look: CharacterLook
   /** Muda a cada ganho de XP → o personagem comemora */
   gainCount: number
@@ -26,14 +29,32 @@ interface Props {
 }
 
 interface SceneApi {
-  play: (clip: string) => void
+  celebrate: (key: string) => void
+  levelUp: () => void
   setLook: (look: TierLook) => void
+  setCharacter: (character: CharacterDefinition) => void
 }
 
-export default function Character3D({ look, gainCount, levelUpCount, celebrationCount, onReady, onError }: Props) {
+const materialsOf = (mesh: THREE.Mesh): THREE.Material[] =>
+  Array.isArray(mesh.material) ? mesh.material : mesh.material ? [mesh.material] : []
+
+function disposeObject(object: THREE.Object3D) {
+  object.traverse(child => {
+    const mesh = child as THREE.Mesh
+    if (!mesh.isMesh) return
+    mesh.geometry?.dispose()
+    materialsOf(mesh).forEach(material => {
+      ;(material as THREE.MeshStandardMaterial).map?.dispose()
+      material.dispose()
+    })
+  })
+}
+
+export default function Character3D({ character, look, gainCount, levelUpCount, celebrationCount, onReady, onError }: Props) {
   const hostRef = useRef<HTMLDivElement>(null)
   const apiRef = useRef<SceneApi | null>(null)
   const lookRef = useRef(look)
+  const characterRef = useRef(character)
   const onReadyRef = useRef(onReady)
   const onErrorRef = useRef(onError)
 
@@ -83,7 +104,16 @@ export default function Character3D({ look, gainCount, levelUpCount, celebration
     const pivot = new THREE.Group()
     scene.add(pivot)
 
+    // ── Modelo em cena (trocado quando o personagem muda) ──
+    let model: THREE.Object3D | null = null
+    let rig: RigDefinition = RIGS[characterRef.current.rig]
+    let loadedId: string | null = null
+    let loadToken = 0
+    let mixer: THREE.AnimationMixer | null = null
+    const actions = new Map<string, THREE.AnimationAction>()
+    let current: THREE.AnimationAction | null = null
     const tinted: THREE.MeshStandardMaterial[] = []
+
     const applyLook = (look: TierLook) => {
       auraMaterial.color.set(look.aura)
       pedestalMaterial.color.set(look.aura)
@@ -91,62 +121,104 @@ export default function Character3D({ look, gainCount, levelUpCount, celebration
     }
     applyLook(lookRef.current)
 
-    let mixer: THREE.AnimationMixer | null = null
-    const actions = new Map<string, THREE.AnimationAction>()
-    let current: THREE.AnimationAction | null = null
-
-    const fadeTo = (name: string, once: boolean) => {
+    const fadeTo = (name: string, once: boolean, repetitions = 1) => {
       const next = actions.get(name)
       if (!next || next === current) return
       next.reset()
-      next.setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, once ? 1 : Infinity)
+      if (once) next.setLoop(repetitions > 1 ? THREE.LoopRepeat : THREE.LoopOnce, repetitions)
+      else next.setLoop(THREE.LoopRepeat, Infinity)
       next.clampWhenFinished = once
       if (current) next.crossFadeFrom(current, 0.3, false)
       next.play()
       current = next
     }
 
-    new GLTFLoader().load(
-      MODEL_URL,
-      gltf => {
-        if (disposed) return
-        const model = gltf.scene
+    const unloadModel = () => {
+      if (!model) return
+      mixer?.stopAllAction()
+      mixer = null
+      actions.clear()
+      current = null
+      tinted.length = 0
+      pivot.remove(model)
+      disposeObject(model)
+      model = null
+    }
 
-        // Normaliza: altura fixa, centralizado e com os pés no pedestal
-        const size = new THREE.Box3().setFromObject(model).getSize(new THREE.Vector3())
-        model.scale.setScalar(MODEL_HEIGHT / (size.y || 1))
-        const box = new THREE.Box3().setFromObject(model)
-        const center = box.getCenter(new THREE.Vector3())
-        model.position.set(-center.x, -box.min.y, -center.z)
+    const loadCharacter = (def: CharacterDefinition) => {
+      if (loadedId === def.id) return
+      loadedId = def.id
+      const token = ++loadToken
+      new GLTFLoader().load(
+        def.model,
+        gltf => {
+          if (disposed || token !== loadToken) {
+            disposeObject(gltf.scene)
+            return
+          }
+          // O modelo anterior fica na tela até o novo chegar
+          unloadModel()
+          rig = RIGS[def.rig]
+          const next = gltf.scene
 
-        model.traverse(object => {
-          const material = (object as THREE.Mesh).material
-          const list = Array.isArray(material) ? material : material ? [material] : []
-          list.forEach(item => {
-            if (item.name === TINTED_MATERIAL && item instanceof THREE.MeshStandardMaterial && !tinted.includes(item)) {
-              tinted.push(item)
-            }
+          // Normaliza: altura fixa, centralizado e com os pés no pedestal
+          const size = new THREE.Box3().setFromObject(next).getSize(new THREE.Vector3())
+          next.scale.setScalar(MODEL_HEIGHT / (size.y || 1))
+          const box = new THREE.Box3().setFromObject(next)
+          const center = box.getCenter(new THREE.Vector3())
+          next.position.set(-center.x, -box.min.y, -center.z)
+
+          // Materiais que recebem a cor do corpo são clonados por malha: assim pintar a roupa
+          // não pinta o que compartilha o mesmo material (ex.: o rosto dos Mini Characters)
+          const tint = rig.tint
+          next.traverse(object => {
+            const mesh = object as THREE.Mesh
+            if (!mesh.isMesh) return
+            const matches = (material: THREE.Material) =>
+              'material' in tint ? material.name === tint.material : mesh.name === tint.mesh
+            const replaced = materialsOf(mesh).map(material => {
+              if (!matches(material) || !(material instanceof THREE.MeshStandardMaterial)) return material
+              const clone = material.clone()
+              tinted.push(clone)
+              return clone
+            })
+            mesh.material = Array.isArray(mesh.material) ? replaced : replaced[0]
           })
-        })
-        applyLook(lookRef.current)
-        pivot.add(model)
+          applyLook(lookRef.current)
 
-        mixer = new THREE.AnimationMixer(model)
-        gltf.animations.forEach(clip => actions.set(clip.name, mixer!.clipAction(clip)))
-        mixer.addEventListener('finished', () => fadeTo('Idle', false))
-        fadeTo('Idle', false)
-        onReadyRef.current()
-      },
-      undefined,
-      () => {
-        if (!disposed) onErrorRef.current()
-      }
-    )
+          model = next
+          pivot.add(next)
+          mixer = new THREE.AnimationMixer(next)
+          gltf.animations.forEach(clip => actions.set(clip.name, mixer!.clipAction(clip)))
+          mixer.addEventListener('finished', () => fadeTo(rig.idle, false))
+          fadeTo(rig.idle, false)
+          onReadyRef.current()
+        },
+        undefined,
+        () => {
+          if (!disposed && token === loadToken) onErrorRef.current()
+        }
+      )
+    }
 
-    apiRef.current = { play: clip => fadeTo(clip, true), setLook: applyLook }
+    // Comemorações: o item guarda uma chave (ThumbsUp, Jump…); cada rig diz qual clipe toca
+    let spinStart = -1
+    const celebrate = (key: string) => {
+      fadeTo(rig.celebrations[key] ?? rig.idle, true, rig.repetitions)
+      if (rig.spinOn.includes(key)) spinStart = performance.now()
+    }
+
+    apiRef.current = {
+      celebrate,
+      levelUp: () => fadeTo(rig.levelUp, true, rig.repetitions),
+      setLook: applyLook,
+      setCharacter: loadCharacter,
+    }
+    loadCharacter(characterRef.current)
 
     // O personagem acompanha o ponteiro de leve
     let targetRotation = 0
+    let baseRotation = 0
     const onPointerMove = (event: PointerEvent) => {
       const rect = host.getBoundingClientRect()
       const offset = (event.clientX - (rect.left + rect.width / 2)) / window.innerWidth
@@ -165,7 +237,14 @@ export default function Character3D({ look, gainCount, levelUpCount, celebration
       if (elapsed < FRAME_MS) return
       last = time
       mixer?.update(Math.min(elapsed / 1000, 0.1))
-      pivot.rotation.y += (targetRotation - pivot.rotation.y) * 0.08
+      baseRotation += (targetRotation - baseRotation) * 0.08
+      let spin = 0
+      if (spinStart >= 0) {
+        const progress = Math.min(1, (time - spinStart) / SPIN_MS)
+        spin = (1 - Math.pow(1 - progress, 3)) * Math.PI * 2
+        if (progress >= 1) spinStart = -1
+      }
+      pivot.rotation.y = baseRotation + spin
       auraMaterial.opacity = 0.38 + Math.sin(time / 700) * 0.12
       renderer.render(scene, camera)
     }
@@ -213,14 +292,11 @@ export default function Character3D({ look, gainCount, levelUpCount, celebration
       renderer.domElement.removeEventListener('webglcontextlost', onContextLost)
       resizeObserver.disconnect()
       visibilityObserver.disconnect()
-      mixer?.stopAllAction()
-      scene.traverse(object => {
-        const mesh = object as THREE.Mesh
-        mesh.geometry?.dispose()
-        const material = mesh.material
-        const list = Array.isArray(material) ? material : material ? [material] : []
-        list.forEach(item => item.dispose())
-      })
+      unloadModel()
+      pedestal.geometry.dispose()
+      pedestalMaterial.dispose()
+      aura.geometry.dispose()
+      auraMaterial.dispose()
       renderer.dispose()
       renderer.domElement.remove()
     }
@@ -232,16 +308,21 @@ export default function Character3D({ look, gainCount, levelUpCount, celebration
   }, [look])
 
   useEffect(() => {
-    if (gainCount > 0) apiRef.current?.play(lookRef.current.celebration)
+    characterRef.current = character
+    apiRef.current?.setCharacter(character)
+  }, [character])
+
+  useEffect(() => {
+    if (gainCount > 0) apiRef.current?.celebrate(lookRef.current.celebration)
   }, [gainCount])
 
   useEffect(() => {
-    if (levelUpCount > 0) apiRef.current?.play('Wave')
+    if (levelUpCount > 0) apiRef.current?.levelUp()
   }, [levelUpCount])
 
   // Roda depois do efeito de `look`, então a comemoração mostrada é a que acabou de ser equipada
   useEffect(() => {
-    if (celebrationCount > 0) apiRef.current?.play(lookRef.current.celebration)
+    if (celebrationCount > 0) apiRef.current?.celebrate(lookRef.current.celebration)
   }, [celebrationCount])
 
   return <div ref={hostRef} className="h-full w-full" aria-hidden="true" />

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
 import type { AvatarState } from '@/src/lib/gamification/avatar'
 import Character2D from './Character2D'
-import { resolveLook } from './tiers'
+import { characterFor, resolveLook } from './tiers'
 
 interface Props {
   tier: number
@@ -49,6 +49,12 @@ export default function Character({ tier, avatar, gainCount, levelUpCount, celeb
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [tier, equipped?.body, equipped?.aura, equipped?.celebration]
   )
+  // Personagem escolhido (o robô quando não há nada equipado)
+  const character = useMemo(
+    () => characterFor(avatar),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [equipped?.character]
+  )
   const [mode, setMode] = useState<'2d' | '3d'>('2d')
   const [ready, setReady] = useState(false)
   // O 2D sai do DOM depois do fade: assim ele nunca fica visível por trás do 3D (o canvas é transparente)
@@ -82,13 +88,14 @@ export default function Character({ tier, avatar, gainCount, levelUpCount, celeb
         <div className={`h-full w-full transition-opacity duration-500 ${ready ? 'opacity-0' : 'opacity-100'}`}>
           {/* A chave reinicia a animação do pulo a cada comemoração escolhida */}
           <div key={celebrationCount} className={`h-full w-full ${celebrationCount > 0 ? 'mascot-hop' : ''}`}>
-            <Character2D look={look} />
+            <Character2D look={look} portrait={character.portrait} />
           </div>
         </div>
       )}
       {mode === '3d' && (
         <div className="absolute inset-0">
           <Character3D
+            character={character}
             look={look}
             gainCount={gainCount}
             levelUpCount={levelUpCount}

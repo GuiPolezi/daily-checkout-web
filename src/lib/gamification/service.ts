@@ -6,6 +6,7 @@ import {
   achievementSourceId,
   findNewAchievements,
   type AchievementDefinition,
+  type AchievementProgress,
   type AchievementStats,
 } from './achievements'
 import { checkEquip, resolveAvatar, type AvatarSlot, type AvatarState, type EquipError } from './avatar'
@@ -93,6 +94,10 @@ type AchievementsResult = Pick<SyncResult, 'unlocked' | 'achievements'> & {
 }
 
 const NO_ACHIEVEMENTS: AchievementsResult = { unlocked: [], achievements: null, paidXp: false, newXp: 0 }
+
+/** Ids das conquistas já desbloqueadas (vazio quando as conquistas não estão disponíveis) */
+const unlockedIds = (list: AchievementProgress[] | null | undefined): ReadonlySet<string> =>
+  new Set((list ?? []).filter(item => item.unlockedAt).map(item => item.id))
 
 /**
  * Desbloqueia o que o usuário já conquistou. O XP da conquista entra no ledger com chave própria
@@ -315,7 +320,7 @@ export async function syncDay(repo: GamificationRepo, userId: string, day: strin
   }
 
   const avatar = await safely<AvatarState | null>('personagem', null, async () =>
-    resolveAvatar(await repo.loadAvatar(userId), summary.level)
+    resolveAvatar(await repo.loadAvatar(userId), { level: summary.level, achievements: unlockedIds(achievements.achievements) })
   )
 
   const levelBefore = levelOf(totalsBefore, config)
@@ -355,12 +360,17 @@ export class EquipAvatarError extends Error {
  */
 export async function equipAvatarItem(repo: GamificationRepo, userId: string, slot: AvatarSlot, itemId: string): Promise<AvatarState> {
   const config = mergeConfig(await repo.loadConfigOverride())
-  const level = levelOf(await repo.loadDayTotals(userId), config)
+  const [totals, achievementState] = await Promise.all([repo.loadDayTotals(userId), repo.loadAchievementState(userId)])
+  // Nível e conquistas vêm do banco: o cliente não decide o que está liberado
+  const unlock = {
+    level: levelOf(totals, config),
+    achievements: new Set((achievementState?.unlocked ?? []).map(item => item.id)),
+  }
 
-  const problem = checkEquip(slot, itemId, level)
+  const problem = checkEquip(slot, itemId, unlock)
   if (problem) throw new EquipAvatarError(problem)
 
-  const current = resolveAvatar(await repo.loadAvatar(userId), level)
+  const current = resolveAvatar(await repo.loadAvatar(userId), unlock)
   const equipped = { ...current.equipped, [slot]: itemId }
   await repo.saveAvatarSlot(userId, slot, itemId, equipped)
   return { ...current, equipped }

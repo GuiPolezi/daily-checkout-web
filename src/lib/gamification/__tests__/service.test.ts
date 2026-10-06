@@ -704,12 +704,12 @@ describe('syncDay — falha de leitura depois de lançar XP', () => {
 describe('personagem', () => {
   it('a sincronização devolve o personagem com o padrão', async () => {
     const result = await sync(MONDAY)
-    expect(result.avatar?.equipped).toEqual({ body: 'body_auto', aura: 'aura_auto', celebration: 'cel_thumbs' })
+    expect(result.avatar?.equipped).toEqual({ character: 'char_robot', body: 'body_auto', aura: 'aura_auto', celebration: 'cel_thumbs' })
   })
 
   it('equipa item liberado e mantém os outros slots', async () => {
     const state = await equipAvatarItem(db, USER, 'aura', 'aura_blue')
-    expect(state.equipped).toEqual({ body: 'body_auto', aura: 'aura_blue', celebration: 'cel_thumbs' })
+    expect(state.equipped).toEqual({ character: 'char_robot', body: 'body_auto', aura: 'aura_blue', celebration: 'cel_thumbs' })
     expect(db.avatar).toEqual({ aura: 'aura_blue' })
     expect((await sync(MONDAY)).avatar?.equipped.aura).toBe('aura_blue')
   })
@@ -719,7 +719,7 @@ describe('personagem', () => {
       equipAvatarItem(db, USER, 'aura', 'aura_blue'),
       equipAvatarItem(db, USER, 'body', 'body_sky'),
     ])
-    expect((await sync(MONDAY)).avatar?.equipped).toEqual({ body: 'body_sky', aura: 'aura_blue', celebration: 'cel_thumbs' })
+    expect((await sync(MONDAY)).avatar?.equipped).toEqual({ character: 'char_robot', body: 'body_sky', aura: 'aura_blue', celebration: 'cel_thumbs' })
   })
 
   it('recusa item que o nível não libera, de outro slot ou inexistente', async () => {
@@ -727,6 +727,12 @@ describe('personagem', () => {
     await expect(equipAvatarItem(db, USER, 'body', 'aura_blue')).rejects.toMatchObject({ reason: 'wrong_slot' })
     await expect(equipAvatarItem(db, USER, 'body', 'xyz')).rejects.toMatchObject({ reason: 'unknown_item' })
     expect(db.avatar).toBeNull()
+  })
+
+  it('personagem por conquista exige a conquista no banco; por nível basta o nível', async () => {
+    await expect(equipAvatarItem(db, USER, 'character', 'char_mini-male-b')).rejects.toMatchObject({ reason: 'locked' })
+    await expect(equipAvatarItem(db, USER, 'character', 'char_mini-male-a')).resolves.toMatchObject({ equipped: { character: 'char_mini-male-a' } })
+    expect((await sync(MONDAY)).avatar?.equipped.character).toBe('char_mini-male-a')
   })
 
   it('o nível que libera o item vem do ledger', async () => {

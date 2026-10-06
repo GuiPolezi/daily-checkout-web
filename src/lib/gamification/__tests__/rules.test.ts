@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { checkEquip, DEFAULT_EQUIPPED, resolveAvatar } from '../avatar'
+import { AVATAR_ITEMS, checkEquip, DEFAULT_EQUIPPED, resolveAvatar } from '../avatar'
+import { CHARACTERS, DEFAULT_CHARACTER_ID, RIGS, findCharacter } from '../characters'
 import { DEFAULT_CONFIG, mergeConfig } from '../config'
 import { addDays, isValidDay, isWorkday, localDay, weekdayName } from '../day'
 import { levelFromXp, tierForLevel, titleForLevel, totalXpForLevel, xpForLevel } from '../levels'
@@ -415,13 +416,57 @@ describe('personagem', () => {
 
   it('item salvo que o nível não libera volta para o padrão', () => {
     const saved = { body: 'body_onyx', aura: 'aura_blue', celebration: 'não existe' }
-    expect(resolveAvatar(saved, 1).equipped).toEqual({ body: 'body_auto', aura: 'aura_blue', celebration: 'cel_thumbs' })
+    expect(resolveAvatar(saved, 1).equipped).toEqual({ character: 'char_robot', body: 'body_auto', aura: 'aura_blue', celebration: 'cel_thumbs' })
     expect(resolveAvatar(saved, 12).equipped.body).toBe('body_onyx')
   })
 
   it('ignora dado salvo com formato inesperado', () => {
     expect(resolveAvatar('lixo', 5).equipped).toEqual(DEFAULT_EQUIPPED)
     expect(resolveAvatar({ body: 42, aura: ['aura_blue'] }, 5).equipped).toEqual(DEFAULT_EQUIPPED)
+  })
+
+  it('personagem por conquista só libera com a conquista, mesmo com nível alto', () => {
+    const byAchievement = AVATAR_ITEMS.find(i => i.slot === 'character' && i.achievementId)!
+    expect(checkEquip('character', byAchievement.id, 200)).toBe('locked')
+    expect(checkEquip('character', byAchievement.id, { level: 1, achievements: new Set([byAchievement.achievementId!]) })).toBeNull()
+    const saved = { character: byAchievement.id }
+    expect(resolveAvatar(saved, 200).equipped.character).toBe(DEFAULT_EQUIPPED.character)
+    expect(resolveAvatar(saved, { level: 1, achievements: new Set([byAchievement.achievementId!]) }).equipped.character).toBe(byAchievement.id)
+  })
+
+  it('personagem por nível libera pelo nível', () => {
+    const byLevel = AVATAR_ITEMS.find(i => i.slot === 'character' && !i.achievementId && i.minLevel > 1)!
+    expect(checkEquip('character', byLevel.id, byLevel.minLevel - 1)).toBe('locked')
+    expect(checkEquip('character', byLevel.id, byLevel.minLevel)).toBeNull()
+  })
+})
+
+describe('elenco de personagens', () => {
+  it('ids únicos, padrão presente e um item de avatar por personagem', () => {
+    const ids = CHARACTERS.map(c => c.id)
+    expect(new Set(ids).size).toBe(ids.length)
+    expect(findCharacter(DEFAULT_CHARACTER_ID)).toBeDefined()
+    expect(CHARACTERS).toHaveLength(13)
+    for (const character of CHARACTERS) {
+      const item = AVATAR_ITEMS.find(i => i.slot === 'character' && i.value === character.id)
+      expect(item).toMatchObject({ title: character.title, minLevel: character.minLevel })
+      expect(character.model).toMatch(/^\/models\/.+\.glb$/)
+      expect(character.portrait).toBe('/models/portraits/'+character.id+'.png')
+    }
+  })
+
+  it('cada rig cobre todas as comemorações do catálogo', () => {
+    const keys = AVATAR_ITEMS.filter(i => i.slot === 'celebration').map(i => i.value!)
+    for (const rig of Object.values(RIGS)) {
+      for (const key of keys) expect(rig.celebrations[key]).toBeTypeOf('string')
+      expect(rig.repetitions).toBeGreaterThanOrEqual(1)
+    }
+  })
+
+  it('conquistas usadas pelo elenco existem', async () => {
+    const { ACHIEVEMENTS } = await import('../achievements')
+    const known = new Set(ACHIEVEMENTS.map(a => a.id))
+    for (const character of CHARACTERS) if (character.achievementId) expect(known.has(character.achievementId)).toBe(true)
   })
 
   it('checkEquip recusa item desconhecido, de outro slot ou bloqueado', () => {

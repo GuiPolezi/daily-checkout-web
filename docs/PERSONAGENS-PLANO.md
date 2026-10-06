@@ -88,6 +88,27 @@ Objetivo: tirar as dúvidas antes de desenhar o catálogo.
 
 Saída: uma lista de decisões escritas neste arquivo e o mapa de animações.
 
+#### Resultado do spike (2026-10-05)
+
+Decisões do dono: personagens de bloco genéricos aceitos; 12 personagens na primeira leva; o robô continua como inicial; tema de ofícios de oficina; desbloqueio por nível e por conquista; moedas depois; assets podem entrar no repositório.
+
+O pacote Mini Characters 1 (Kenney, versão 1.0, CC0) foi baixado e testado num visualizador local com o mesmo `three` do projeto, no Chrome. Conclusões:
+
+| Pergunta | Resposta |
+|---|---|
+| Arquivos | 12 personagens em GLB de 242 a 273 KB cada, mais uma textura compartilhada `Textures/colormap.png` de 8,7 KB (o GLB a referencia por caminho relativo; a pasta `Textures` precisa ficar ao lado dos modelos). Total ≈ 3 MB |
+| Esqueleto | Igual nos 12: `root`, `leg-left`, `leg-right`, `torso`, `arm-left`, `arm-right`, `head`. Duas malhas: `body-mesh` e `head-mesh`. Um só material, `colormap` |
+| Visual | Proporções de boneco, bem distintos entre si (policial, terno, macacão, uniformes, cabelos variados). Aprovados na grade de 12 |
+| Tinta | **Funciona.** Multiplicar a cor sobre a textura do `body-mesh` recolore a roupa sem estragar o rosto (fica em `head-mesh`). As seis cores do catálogo atual ficaram boas; "Cor do personagem" continua valendo para todos |
+| Animações | 32 clipes curtos de jogo (0,3 a 0,7 s): `idle`, `walk`, `sprint`, `jump`, `fall`, `crouch`, `sit`, `drive`, `die`, `pick-up`, `emote-yes`, `emote-no`, `holding-*`, `attack-melee-*`, `attack-kick-*`, `interact-*`, `wheelchair-*`. **Não há** acenar, joinha nem dança |
+| Comemorações | Mapa proposto: Joinha → `interact-right` (braço estendido à frente); Sim! → `emote-yes` (acena com a cabeça); Pulo → `jump`; Soco no ar → `attack-melee-right`; Dança → não existe: substituir por "Reverência" (`pick-up`, o boneco se curva) ou fazer um giro procedural do `root` no código. Subida de nível (hoje `Wave`) → `interact-right` seguido de `emote-yes`. Como os clipes são curtos, tocar duas vezes ou somar um pulinho procedural do `root` deixa a comemoração visível |
+| Acessórios | O pacote traz óculos, óculos escuros, máscara, aparelho auditivo, bengalas e cadeiras de rodas; **não traz chapéus nem cabelo solto** (o cabelo faz parte de `head-mesh`). Anexar um GLB como filho do osso `head` funciona e a peça acompanha a cabeça na animação, mas **cada acessório precisa de um deslocamento próprio** no catálogo: óculos ≈ (0; 0,10; 0,12), máscara ≈ (0; 0,09; 0,05). Sem o deslocamento a peça nasce dentro da cabeça |
+| Chapéus | Como o acessório é uma malha estática presa ao osso, qualquer chapéu CC0 de outro pacote serve (não precisa do mesmo rig), bastando escala e deslocamento no catálogo. Fonte a escolher na fase 2 |
+| Retratos | O método "renderizar num canvas e copiar para PNG" funcionou na grade; vira o script de geração de retratos da fase 1 |
+| Página de spike | Ficou fora do repositório (pasta temporária); a fase 1 cria a página de retratos dentro do projeto |
+
+Ajustes no plano a partir disso: a fase 2 (acessórios) começa pelos óculos e máscara do próprio pacote e busca chapéus em outro pacote CC0; "cabelo" sai do escopo enquanto o elenco for o Mini Characters. A comemoração "Dança" muda de nome ou ganha um giro feito em código.
+
 ### Fase 1 — Escolher o personagem (duas a três sessões)
 
 - Catálogo `src/lib/gamification/characters.ts`: id, nome, arquivo do modelo, retrato, mapa de animações, aceita tinta, regra de desbloqueio (`minLevel` ou `achievementId`).

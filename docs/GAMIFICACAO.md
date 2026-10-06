@@ -52,11 +52,14 @@ Com um ritmo de cerca de 80 XP por dia útil: nível 5 em umas 2 a 3 semanas, n�
 
 | Níveis | Título |
 |---|---|
-| 1–4 | Aprendiz de Essências |
-| 5–9 | Perfumista Júnior |
-| 10–19 | Perfumista |
-| 20–34 | Mestre Perfumista |
-| 35+ | Nariz Lendário |
+| 1–4 | Bronze |
+| 5–9 | Prata |
+| 10–19 | Ouro |
+| 20–34 | Platina |
+| 35–49 | Esmeralda |
+| 50–69 | Diamante |
+| 70–99 | Mestre |
+| 100+ | Grão-Mestre |
 
 O personagem muda de cor a cada faixa de título. É só visual; não dá vantagem.
 

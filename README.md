@@ -89,11 +89,14 @@ A cada faixa de nível você ganha um título novo e o personagem muda de cor:
 
 | Níveis | Título |
 |:---:|---|
-| 1 – 4 | Aprendiz de Essências |
-| 5 – 9 | Perfumista Júnior |
-| 10 – 19 | Perfumista |
-| 20 – 34 | Mestre Perfumista |
-| 35+ | Nariz Lendário |
+| 1 – 4 | Bronze |
+| 5 – 9 | Prata |
+| 10 – 19 | Ouro |
+| 20 – 34 | Platina |
+| 35 – 49 | Esmeralda |
+| 50 – 69 | Diamante |
+| 70 – 99 | Mestre |
+| 100+ | Grão-Mestre |
 
 **Você nunca perde XP nem nível** por ficar sem usar o sistema.
 

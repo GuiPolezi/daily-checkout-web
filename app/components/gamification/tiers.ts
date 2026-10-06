@@ -18,12 +18,16 @@ export interface CharacterLook extends TierLook {
 
 const DEFAULT_CELEBRATION = 'ThumbsUp'
 
+// Uma entrada por título, na ordem de `titles` em config.ts
 export const TIER_LOOKS: TierLook[] = [
-  { body: '#5ac8fa', aura: '#32ade6' },
-  { body: '#4cd964', aura: '#34c759' },
-  { body: '#3a8dff', aura: '#007aff' },
-  { body: '#c38bff', aura: '#af52de' },
-  { body: '#ffd24a', aura: '#ffb300' },
+  { body: '#5ac8fa', aura: '#32ade6' }, // Bronze
+  { body: '#4cd964', aura: '#34c759' }, // Prata
+  { body: '#3a8dff', aura: '#007aff' }, // Ouro
+  { body: '#c38bff', aura: '#af52de' }, // Platina
+  { body: '#ffd24a', aura: '#ffb300' }, // Esmeralda
+  { body: '#b8f0ff', aura: '#30b0c7' }, // Diamante
+  { body: '#ff6b6b', aura: '#ff3b30' }, // Mestre
+  { body: '#2c2c2e', aura: '#ffd60a' }, // Grão-Mestre
 ]
 
 export function lookForTier(tier: number): TierLook {

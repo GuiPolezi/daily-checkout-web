@@ -226,12 +226,22 @@ describe('computeDesiredAwards — tarefas avulsas', () => {
     expect(awardsFor(snapshot({ tasks: [task({ completedAt: null })] }))).toMatchObject([{ amount: 0, reason: 'legacy' }])
   })
 
-  it('respeita o teto diário', () => {
+  it('sem teto por padrão: toda tarefa concluída rende XP', () => {
     const tasks = Array.from({ length: 12 }, (_, i) =>
       task({ completedAt: `${MONDAY}T15:${String(i).padStart(2, '0')}:00Z` })
     )
     const awards = awardsFor(snapshot({ tasks }))
-    expect(awards.reduce((sum, a) => sum + a.amount, 0)).toBe(config.task.dailyCap)
+    expect(awards.reduce((sum, a) => sum + a.amount, 0)).toBe(120)
+    expect(awards.every(a => a.amount === 10 && a.reason === 'ok')).toBe(true)
+  })
+
+  it('respeita o teto diário quando configurado', () => {
+    const cfg = { ...config, task: { ...config.task, dailyCap: 100 } }
+    const tasks = Array.from({ length: 12 }, (_, i) =>
+      task({ completedAt: `${MONDAY}T15:${String(i).padStart(2, '0')}:00Z` })
+    )
+    const awards = awardsFor(snapshot({ tasks }), [], MONDAY, cfg)
+    expect(awards.reduce((sum, a) => sum + a.amount, 0)).toBe(100)
     expect(awards.slice(0, 10).every(a => a.amount === 10)).toBe(true)
     expect(awards[10]).toMatchObject({ amount: 0, reason: 'daily_cap' })
   })
@@ -252,17 +262,26 @@ describe('computeDesiredAwards — rotina e bônus', () => {
     { id: 3, dayOfWeek: 'Terça' },
   ]
 
-  it('rotina do dia vale XP e não entra no teto', () => {
-    const cfg = mergeConfig({ task: { dailyCap: 0 } })
+  it('rotina do dia vale XP e não entra no teto das tarefas', () => {
+    const cfg = mergeConfig({ task: { dailyCap: 1 } })
     const awards = awardsFor(snapshot({ routineTasks, completedRoutineIds: [1] }), [], MONDAY, cfg)
     expect(awards).toMatchObject([{ sourceId: 'routine:1', amount: 8 }])
   })
 
-  it('rotina tem teto diário próprio', () => {
+  it('rotina sem teto por padrão', () => {
     const many = Array.from({ length: 15 }, (_, i) => ({ id: i + 1, dayOfWeek: 'Todos' }))
     const awards = awardsFor(snapshot({ routineTasks: many, completedRoutineIds: many.map(t => t.id) }))
     const routine = awards.filter(a => a.kind === 'routine')
-    expect(routine.reduce((sum, a) => sum + a.amount, 0)).toBe(config.task.routineDailyCap)
+    expect(routine).toHaveLength(15)
+    expect(routine.every(a => a.amount === 8 && a.reason === 'ok')).toBe(true)
+  })
+
+  it('rotina respeita o teto próprio quando configurado', () => {
+    const cfg = { ...config, task: { ...config.task, routineDailyCap: 80 } }
+    const many = Array.from({ length: 15 }, (_, i) => ({ id: i + 1, dayOfWeek: 'Todos' }))
+    const awards = awardsFor(snapshot({ routineTasks: many, completedRoutineIds: many.map(t => t.id) }), [], MONDAY, cfg)
+    const routine = awards.filter(a => a.kind === 'routine')
+    expect(routine.reduce((sum, a) => sum + a.amount, 0)).toBe(80)
     expect(routine[10]).toMatchObject({ sourceId: 'routine:11', amount: 0, reason: 'daily_cap' })
     expect(awards.find(a => a.kind === 'perfect_day')).toMatchObject({ amount: 30 })
   })

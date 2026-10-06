@@ -56,12 +56,11 @@ Tudo abaixo passou em testes automáticos e revisão de código, mas **ninguém 
 | "Hoje" segue o fuso de Brasília | Antes era UTC: depois das 21h o sistema já mostrava o dia seguinte |
 | Prioridade não muda o XP | A pessoa escolhe a própria prioridade; premiar "Urgente" incentivaria marcar tudo assim |
 | Sequência por dia útil ativo, não por checkout | Havia 19 checkouts em 6 meses contra 711 tarefas; por checkout a sequência viveria zerada |
-| Teto de 100 XP/dia de tarefas | O ritmo real é de 3 a 4 tarefas por dia, cerca de 80 XP |
+| Tetos diários **desligados** (em 2026-10-05; antes 100 XP de tarefas e 80 de rotina) | Decisão do dono: toda tarefa concluída deve render XP. O ritmo real é de 3 a 4 tarefas por dia, cerca de 80 XP, então o teto raramente agia; os valores antigos podem voltar pela `gamification_config` |
 | Curva `150 × nível^0,6` (em 2026-10-05; antes `60 × nível^1,5`) | A curva antiga deixava os títulos altos a décadas de distância. A nova segue os prazos da pesquisa sobre hábitos (ver "Por que a curva é assim" em `GAMIFICACAO.md`) |
 | Nível não é gravado, é derivado do XP | Evita divergência entre banco e tela |
 | Regra do tempo mínimo (1 minuto) **desligada** | O usuário lança no fim do dia o que já fez; a regra zeraria o XP |
 | `three` puro, sem react-three-fiber | Mesmo resultado com menos peso; fica fora do carregamento inicial |
-| Teto de 80 XP/dia para rotina | Qualquer pessoa pode criar rotinas; sem teto dava para fabricar XP |
 | Metas de equipe **desligadas** e painel do gestor **não iniciado** | Só há um usuário; equipe fica em análise |
 | Progresso da equipe oculto abaixo de 3 contribuidores | Com poucas pessoas, o total menos o próprio número revela o do colega |
 

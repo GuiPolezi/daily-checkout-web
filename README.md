@@ -62,7 +62,7 @@ O próprio card avisa o motivo.
 
 - **Título repetido no dia** — duas tarefas com o mesmo título no mesmo dia rendem XP uma vez só.
 - **Concluída fora do dia** — tarefa de ontem concluída hoje não rende XP.
-- **Teto diário** — tarefas rendem no máximo **100 XP por dia**; a rotina tem um teto próprio de **80 XP**. Os bônus ficam fora do teto.
+- **Não há teto diário.** Toda tarefa e toda rotina concluída rende XP, quantas forem. (Um teto pode ser ligado na configuração, se um dia fizer falta.)
 - **Rotina de outro dia** — só rende XP a rotina prevista para o dia da semana de hoje (ou para "Todos").
 
 Rotina, checkout e dia perfeito só rendem XP **no próprio dia**.

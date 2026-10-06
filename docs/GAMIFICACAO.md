@@ -26,7 +26,7 @@ O card da tarefa mostra o motivo. As regras existem para que o XP reflita trabal
 
 - **Título repetido no dia** — duas tarefas com o mesmo título no mesmo dia rendem XP uma vez só.
 - **Concluída fora do dia** — tarefa de ontem concluída hoje não rende XP.
-- **Teto diário** — tarefas avulsas rendem no máximo 100 XP por dia. A rotina tem um teto próprio de 80 XP por dia. Os bônus não entram em teto.
+- **Não há teto diário** — toda tarefa e toda rotina concluída rende XP, quantas forem. Os tetos (`task.dailyCap` e `task.routineDailyCap`) existem na configuração, desligados com valor 0, e podem ser religados sem deploy.
 
 Se você desfaz uma conclusão (volta o card de coluna, apaga a tarefa ou desmarca a rotina), o XP correspondente é estornado. Concluir de novo devolve o XP — nunca em dobro.
 
@@ -244,7 +244,7 @@ Parâmetros disponíveis: `timeZone`, `workdays`, `task` (`baseXp`, `routineBase
 
 Atenção: mudar a curva (`level`) muda o nível de todos imediatamente, porque o nível é derivado do XP. Mudar valores de XP vale para o dia de hoje em diante; dias já lançados só são recalculados se forem sincronizados de novo.
 
-Existe uma regra opcional de tempo mínimo (`task.minSecondsToComplete`): com ela ligada, tarefa criada e concluída em menos de N segundos não rende XP. Ela vem **desligada** (valor 0), porque a equipe costuma lançar no fim do dia o que já fez. O teto diário e a regra de título repetido continuam limitando o abuso.
+Existe uma regra opcional de tempo mínimo (`task.minSecondsToComplete`): com ela ligada, tarefa criada e concluída em menos de N segundos não rende XP. Ela vem **desligada** (valor 0), porque a equipe costuma lançar no fim do dia o que já fez. Os tetos diários (`task.dailyCap` para tarefas, `task.routineDailyCap` para rotina) também vêm desligados (valor 0), por decisão do dono em 2026-10-05: toda conclusão deve render XP. A regra de título repetido continua limitando o abuso.
 
 ### Como recalcular o progresso
 

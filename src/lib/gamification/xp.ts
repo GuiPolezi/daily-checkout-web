@@ -38,7 +38,8 @@ const byCompletion = (a: DayTask, b: DayTask) => completionTime(a) - completionT
 function taskAwards(day: string, tasks: DayTask[], streakDays: number, config: GamificationConfig): Award[] {
   const streakMult = streakMultiplier(streakDays, config.streak)
   const seenTitles = new Set<string>()
-  let capRemaining = config.task.dailyCap
+  // Teto 0 = sem teto (padrão): toda tarefa concluída rende XP
+  let capRemaining = config.task.dailyCap > 0 ? config.task.dailyCap : Number.POSITIVE_INFINITY
 
   return tasks
     .filter(task => task.status === COMPLETED_STATUS)
@@ -98,7 +99,7 @@ function routineAwards(day: string, snapshot: DaySnapshot, streakDays: number, c
   const done = new Set(snapshot.completedRoutineIds)
   const streakMult = streakMultiplier(streakDays, config.streak)
   const raw = xpForTask({ base: config.task.routineBaseXp, priorityMultiplier: 1, streakMultiplier: streakMult })
-  let capRemaining = config.task.routineDailyCap
+  let capRemaining = config.task.routineDailyCap > 0 ? config.task.routineDailyCap : Number.POSITIVE_INFINITY
 
   const awards: Award[] = scheduled
     .filter(task => done.has(task.id))

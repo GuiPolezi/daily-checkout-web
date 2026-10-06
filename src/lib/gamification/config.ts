@@ -19,9 +19,9 @@ export interface GamificationConfig {
     baseXp: number
     routineBaseXp: number
     priorityMultipliers: Record<Priority, number>
-    /** Teto diário de XP vindo de tarefas avulsas (rotina e bônus ficam fora) */
+    /** Teto diário de XP vindo de tarefas avulsas (rotina e bônus ficam fora). 0 desliga o teto */
     dailyCap: number
-    /** Teto diário de XP vindo de tarefas de rotina (qualquer pessoa pode criar rotinas) */
+    /** Teto diário de XP vindo de tarefas de rotina. 0 desliga o teto */
     routineDailyCap: number
     /** Tarefa concluída antes disso, contado da criação, não gera XP (0 desliga a regra) */
     minSecondsToComplete: number
@@ -89,8 +89,10 @@ export const DEFAULT_CONFIG: GamificationConfig = {
     routineBaseXp: 8,
     // A prioridade é escolhida pelo próprio usuário; multiplicar por ela premiaria marcar tudo como urgente
     priorityMultipliers: { Normal: 1, Moderado: 1, Urgente: 1 },
-    dailyCap: 100,
-    routineDailyCap: 80,
+    // Sem teto por decisão do dono (2026-10-05): toda tarefa e rotina concluída rende XP.
+    // Os tetos antigos (100 e 80) podem voltar pela gamification_config.
+    dailyCap: 0,
+    routineDailyCap: 0,
     // Desligada por decisão da equipe: muita gente lança no fim do dia o que já fez
     minSecondsToComplete: 0,
     dedupeTitles: true,

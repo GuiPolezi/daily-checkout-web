@@ -265,6 +265,7 @@ Importe o repositório na [Vercel](https://vercel.com) e cadastre as mesmas trê
 | [Gamificação](./docs/GAMIFICACAO.md) | Regras completas, modelo de dados e como ajustar valores de XP, missões e níveis |
 | [Banco de dados](./docs/BANCO-DE-DADOS.md) | Tabelas, perfis, fotos e migrations |
 | [Contexto e próximos passos](./docs/GAMIFICACAO-CONTEXTO.md) | Histórico das decisões e o que vem a seguir |
+| [Personagens — plano](./docs/PERSONAGENS-PLANO.md) | Análise e fases para a escolha de personagem, acessórios e moedas |
 
 ## Créditos
 

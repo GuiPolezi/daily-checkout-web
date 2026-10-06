@@ -88,6 +88,8 @@ Tudo ajustável em `gamification_config` (ver "Como ajustar parâmetros" em `GAM
   - O personagem 3D é carregado sob demanda; manter isso para não atrasar o kanban.
   - O projeto ainda não tem um `DESIGN.md`. Se o novo design virar referência, vale criar um na raiz com cores, espaçamentos e componentes.
 
+- **Escolha de personagem, acessórios e moedas.** Planejado em [`PERSONAGENS-PLANO.md`](./PERSONAGENS-PLANO.md) (2026-10-05); aguarda as decisões da seção 6 daquele arquivo para começar pelo spike.
+
 ### Decidir antes do primeiro uso real
 
 - **Backfill.** Há 711 tarefas antigas. `node scripts/backfill-xp.mjs` simula; com `--apply`, grava cerca de 10 XP por tarefa já concluída. Começar do zero ou não é mais fácil de decidir antes de acumular XP novo.

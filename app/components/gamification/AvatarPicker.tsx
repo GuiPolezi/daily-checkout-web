@@ -219,7 +219,7 @@ export default function AvatarPicker({ avatar, onEquip, onPreviewCelebration }: 
 
   return (
     <section className="glass rounded-[1.75rem] p-5 sm:p-6" aria-label="Personalizar personagem">
-      <h2 className="text-[15px] font-semibold text-ink">Personagem</h2>
+      <h2 className="text-[15px] font-semibold text-ink">Personalização</h2>
       <p className="mt-1 text-xs text-ink-3">Itens só visuais, liberados conforme o seu nível e as suas conquistas.</p>
 
       <div className="mt-4 space-y-5">
